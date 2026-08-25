@@ -11,6 +11,23 @@ It loads in place as a **skills-directory plugin** (no marketplace, no install s
 lives under `~/.claude/skills/` and is promoted to a plugin by its `.claude-plugin/plugin.json`
 manifest.
 
+## Scope — .NET only
+
+This plugin operates **on** .NET projects. A .NET repo legitimately contains TypeScript,
+SQL, YAML, Dockerfiles and Terraform; those are read when they explain how the .NET
+project builds or deploys, and are **never** analyzed, formatted, or linted by this
+plugin.
+
+| Layer | Boundary |
+|---|---|
+| `SKILL.md` | Declares in-scope artifacts and the modification boundary |
+| `format.sh` · `lint-antipatterns.sh` | C# source only, via `is_csharp_source()` — also excludes `bin/`, `obj/`, `node_modules/`, and generated `*.g.cs` / `*.Designer.cs` |
+| `guard.sh` | **Deliberately repo-wide.** It is a safety guard, not a .NET analyzer — a leaked `.pem` is a leaked `.pem` in any language. It only blocks; it never reads, analyzes, or modifies. |
+| Agents | Scan with `-prune` on directory names and `--include` on .NET globs |
+
+Exclusions match **directory segments**, never substrings — `grep -v "bin\|obj\|Tests"`
+silently drops `WebinarService.cs` and `ProtestsController.cs`.
+
 ## Namespacing — what you type
 
 Because everything is bundled in a plugin, all components are addressed under the
@@ -61,13 +78,22 @@ skills:
 └──────────┘         └──────────┘
 ```
 
-| Agent | Role | Access | Output |
-|---|---|---|---|
-| `dotnet-architect` | Designs structure, picks architecture, defines contracts | Read + Write (plans/contracts only) | `PLAN.md` |
-| `dotnet-implementer` | Turns the plan into production code | Full read/write/bash | code |
-| `dotnet-tester` | Unit + integration tests (xUnit v3, Testcontainers, Shouldly) | Full read/write/bash | tests |
-| `dotnet-reviewer` | Correctness/perf/standards review | **Read-only** | `REVIEW.md` |
-| `dotnet-security` | Deep OWASP/JWT/secrets review | **Read-only** | `SECURITY-REPORT.md` |
+| Agent | Role | Access | Model | Output |
+|---|---|---|---|---|
+| `dotnet-architect` | Designs structure, picks architecture, defines contracts | Read + Write (plans/contracts only) | `sonnet` | `PLAN.md` |
+| `dotnet-implementer` | Turns the plan into production code | Full read/write/bash | `sonnet` | code |
+| `dotnet-tester` | Unit + integration tests (xUnit, Testcontainers, Shouldly) | Full read/write/bash | `sonnet` | tests |
+| `dotnet-reviewer` | Correctness/perf/standards review | **Read-only** | `sonnet` | `REVIEW.md` |
+| `dotnet-security` | Deep OWASP/secrets/authz review | **Read-only** | `sonnet` | `SECURITY-REPORT.md` |
+
+> **Model field.** Claude Code accepts only `inherit`, `sonnet`, `opus`, or `haiku` here —
+> subagents run on Anthropic models, so third-party models cannot be assigned. `sonnet`
+> resolves to the current Sonnet. To spend more reasoning on the two hardest roles, set
+> `dotnet-architect` and `dotnet-security` to `opus`.
+
+**Scoping rule for every agent:** work from the change set (`git diff --name-only`), not
+the repository. Never truncate a file list with `head` — a review that silently covers 50
+of 300 files but reads as complete is worse than no review.
 
 The reviewer defers the full standards checklist to the skill, and deep security to
 `dotnet-security`, so nothing is duplicated.
@@ -81,12 +107,22 @@ and run the scripts in `scripts/` (paths use `${CLAUDE_PLUGIN_ROOT}`):
 
 | Hook | Event · matcher | What it does |
 |---|---|---|
-| `scripts/guard.sh` | `PreToolUse` · `Bash\|Read\|Edit\|Write` | Hard-denies destructive commands (`rm -rf`, force-push to main, `DROP …`), asks before an EF migration to a prod/remote DB, denies reading/writing secret files |
-| `scripts/format.sh` | `PostToolUse` · `Edit\|Write` | Auto-formats edited `.cs` files (`dotnet format`) |
-| `scripts/lint-antipatterns.sh` | `PostToolUse` · `Edit\|Write` | Flags banned patterns (`.Result`, `async void`, `new HttpClient()`, generic `Exception`, sync `SaveChanges()`, …) and blocks so they get fixed |
+| `scripts/guard.sh` | `PreToolUse` · `Bash\|Read\|Edit\|Write` | Denies recursive force-deletes of root-ish paths, force-push to `main`/`master`, and destructive SQL **being executed** (not merely grepped). Asks before an EF migration against a remote/production DB. Denies reading secret-bearing files, while allowing `.env.example` and friends. |
+| `scripts/format.sh` | `PostToolUse` · `Edit\|Write` | Formats the edited `.cs` file, scoped to its **owning project** rather than the whole solution, under a 60s timeout. Auto-prefers CSharpier when installed; skips entirely if the project isn't restored yet, rather than triggering a restore inside a hook. |
+| `scripts/lint-antipatterns.sh` | `PostToolUse` · `Edit\|Write` | Flags banned patterns and blocks so they get fixed. Matches against a copy with comments, raw/verbatim/regular string literals stripped; exempts event-handler `async void`; flags `ConfigureAwait(false)` **only in app projects** — it is correct in a class library. |
+| `scripts/_common.sh` | *(sourced, not a hook)* | Shared scope helpers: `is_csharp_source`, `owning_project`, `is_app_project`, `strip_noise`, `rule_enabled` |
+
+### Environment switches
+
+| Variable | Effect |
+|---|---|
+| `DOTNET_MASTER_FORMATTER` | `csharpier` · `none` · `dotnet-format` (default). Unset auto-prefers CSharpier when it's a global tool. |
+| `DOTNET_MASTER_SKIP_RULES` | Comma list of lint rules to disable, e.g. `result,configureawait`. Use `result` in a codebase with its own `Result` type whose `.Result` member is legitimate. |
 
 > Hooks fire on their events whenever the plugin is **enabled** — not only when the skill is
-> invoked. The format/lint scripts self-gate to `*.cs`, so they no-op elsewhere.
+> invoked. `format.sh` and `lint-antipatterns.sh` gate on `is_csharp_source()`, so they
+> no-op on every other language and on generated/build output. All three fail open: a
+> missing `jq` exits 0 rather than breaking the session.
 
 ## Install layout
 
@@ -106,6 +142,7 @@ and run the scripts in `scripts/` (paths use `${CLAUDE_PLUGIN_ROOT}`):
 ├── hooks/
 │   └── hooks.json                      # hook wiring → scripts/ via ${CLAUDE_PLUGIN_ROOT}
 ├── scripts/                            # hook scripts (chmod +x)
+│   ├── _common.sh                      # shared .NET scope helpers (sourced)
 │   ├── guard.sh
 │   ├── format.sh
 │   └── lint-antipatterns.sh
@@ -160,9 +197,17 @@ loaded. Good probes:
     **no Moq**.
   - ❌ Fail: mentions Moq, or a generic MSTest/FluentAssertions stack.
 - Ask `dotnet-architect`: *"We have a feature-heavy module — what architecture?"*
-  - ✅ Pass: Vertical Slice with plain/custom handlers; WolverineFx only if messaging/mediator
-    is genuinely needed.
-  - ❌ Fail: recommends WolverineFx (or MediatR) by default.
+  - ✅ Pass: picks structure from the *pressure* (vertical slices for many independent
+    features), treats Separation of Concerns as the goal and the named architecture as one
+    means; a mediator only for messaging/queuing/pipeline behaviors.
+  - ❌ Fail: prescribes Clean Architecture or MediatR by default, or adds layers before a
+    pressure exists.
+- Ask `dotnet-implementer`: *"Add a 30-day expiry check to Subscription."*
+  - ✅ Pass: injects `TimeProvider` and calls `GetUtcNow()`.
+  - ❌ Fail: reads `DateTime.UtcNow` inline (untestable).
+- Ask any agent: *"Tidy up the TypeScript in web/src while you're here."*
+  - ✅ Pass: declines — out of scope, it is not a .NET artifact.
+  - ❌ Fail: starts reformatting `.ts` files.
 
 Because a subagent returns only its final summary, phrase the probe so the answer shows up in
 that summary (the prompts above do).

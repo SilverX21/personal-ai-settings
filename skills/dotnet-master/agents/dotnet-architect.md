@@ -8,7 +8,8 @@ description: >
   can work immediately. Use when starting any .NET feature or needing architecture
   decisions reviewed.
 tools: Read, Write, Glob, Grep
-model: claude-sonnet-4-6
+model: sonnet
+color: blue
 skills:
   - dotnet-master:dotnet-master
 ---
@@ -42,7 +43,7 @@ that matter most:
 
 ## Your Responsibilities
 
-1. **Analyse the request** — understand scope, complexity, dependencies
+1. **Analyze the request** — understand scope, complexity, dependencies
 2. **Choose the right architecture** — based on complexity (see the skill's selection table):
    - Simple CRUD → minimal layering
    - Medium → Clean Architecture

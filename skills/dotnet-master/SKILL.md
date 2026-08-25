@@ -1,27 +1,98 @@
 ---
 name: dotnet-master
 description: >
-  You're a .NET and C# master skill. Load this skill whenever working on ANY .NET or C# task,
-  including APIs, architecture decisions, code reviews, database work, testing, or cloud deployment.
-  Trigger on any mention of .NET, C#, ASP.NET, EF Core, Minimal APIs, xUnit, Serilog, Azure, or any related .NET ecosystem topic. This skill encodes Nuno's exact standards, patterns, preferences, and anti-patterns to avoid — always code to these standards without being asked.
+  .NET and C# engineering standards. Load for any .NET or C# task — APIs, architecture,
+  code review, EF Core, testing, project configuration, packaging, or deployment of a
+  .NET application. Triggers on .NET, C#, ASP.NET Core, EF Core, Minimal APIs, MSBuild,
+  NuGet, xUnit, or any .NET SDK topic, and on .NET project files (.cs, .csproj, .sln,
+  .slnx, Directory.Build.props, Directory.Packages.props, global.json, NuGet.config).
+  Not a general-purpose software-engineering skill — do not load it for work that is not
+  .NET.
 ---
 
-# .NET Master Skill — Nuno's Standards
+# .NET Master
+
+Engineering standards for .NET applications and libraries.
+
+## Scope
+
+**In scope.** C#, F#/VB when part of a .NET solution, the .NET SDK and CLI, ASP.NET Core,
+EF Core, MSBuild, NuGet, .NET analyzers, and the files that configure them: `*.cs`,
+`*.csproj` / `*.fsproj` / `*.vbproj`, `*.sln` / `*.slnx`, `Directory.Build.props`,
+`Directory.Build.targets`, `Directory.Packages.props`, `global.json`, `NuGet.config`, and
+`.editorconfig` rules that apply to .NET.
+
+**Out of scope.** A .NET repository legitimately contains TypeScript, SQL, Dockerfiles,
+YAML, Terraform, and shell scripts. Read them when you need to understand how the .NET
+project is built, configured, tested, or deployed — **never analyze, reformat, lint, or
+"fix" them under these standards.** They have their own.
+
+**Modification boundary.** Change a file only when the task requires it. Identify the
+project first, then the files that matter. Never edit a file merely because it turned up
+in a search, and never touch generated output (`bin/`, `obj/`, `*.g.cs`, `*.Designer.cs`).
+
+---
+
+## Version awareness — read this before recommending anything
+
+These standards describe **.NET 10 / C# 14**. Projects on older versions are normal and
+not defects.
+
+1. **Check the target before advising.** Read `TargetFramework(s)` and `LangVersion` from
+   the `.csproj`, plus `Directory.Build.props` and `global.json`. When they disagree, the
+   project file wins for the project; `global.json` pins the SDK.
+2. **Never recommend an API the target framework doesn't have.** `TimeProvider` needs
+   net8.0+; `ExecuteUpdateAsync` needs EF Core 7+; C# 14 extension members need
+   `LangVersion` 14.
+3. **Don't propose a framework upgrade** unless the task asks for one or the target is out
+   of support. Say what the upgrade would buy, then let the owner decide.
+4. **Name the version** whenever guidance is version-sensitive ("EF Core 8+", "net9.0+").
+5. **Separate stable from preview.** Preview and experimental APIs are opt-in only, never
+   a default recommendation.
+6. **Prefer official Microsoft documentation** for version-sensitive behavior over blog
+   posts or memory.
+
+---
 
 ## Core Principles
-- **SOLID** — always, no exceptions
-- **KISS** — simplest solution that works
-- **YAGNI** — don't build what isn't needed yet
+
+- **Separation of Concerns** — the primary structural principle. Each unit owns one
+  responsibility: HTTP/transport, application/use-case logic, domain rules, persistence,
+  external integrations, configuration, and cross-cutting concerns stay distinct and
+  depend inward. SoC is about **boundaries, not folder count** — it does not mandate Clean
+  Architecture, Vertical Slice, CQRS, or DDD. Achieve it with the least structure the
+  problem needs.
+- **SOLID** — with SRP and DIP doing most of the work in practice
+- **KISS** — the simplest design that satisfies the requirement
+- **YAGNI** — no speculative extensibility, no abstraction with one implementation
 - **DRY** — with judgment; some duplication beats the wrong abstraction
-- **Fail Fast** — validate inputs early, throw meaningful specific exceptions
-- **Boy Scout Rule** — leave code cleaner than you found it
+- **Fail Fast** — validate at trust boundaries and reject bad input immediately. *How* you
+  report the failure depends on the layer: expected/business failures return `ErrorOr`,
+  programmer errors and broken invariants throw (see Error Handling).
+- **Boy Scout Rule** — scoped to the files the task already touches
+
+### Avoid over-engineering
+
+Do not add an interface with one implementation, a repository that only wraps
+`DbContext`, a mediator for in-process calls, a mapper for two properties, or a new
+project to hold three classes. Each layer must earn its place by removing real coupling
+or enabling a test you otherwise couldn't write.
 
 ---
 
-## Stack & Versions
-- **.NET 10** — always use the latest
-- **PostgreSQL 18** — preferred database
-- **C# 14** — use latest language features
+## Stack defaults
+
+Sensible defaults, **not requirements** — a project's existing choices win.
+
+| Concern | Default | Note |
+|---|---|---|
+| Runtime / language | .NET 10 / C# 14 | Respect the project's actual target |
+| Database | PostgreSQL or SQL Server | Whatever the project already uses |
+| Logging | `Microsoft.Extensions.Logging` | Serilog when structured sinks are needed |
+| Validation | FluentValidation, or `IValidatableObject` / DataAnnotations for simple cases | |
+| Result type | `ErrorOr` | Or a minimal hand-rolled `Result<T>` if the dependency isn't allowed — one type per solution |
+| Resilience | `Microsoft.Extensions.Http.Resilience` | Wraps Polly; prefer it over raw Polly for HTTP |
+| Testing | xUnit + NSubstitute + Testcontainers | See Testing |
 
 ---
 
@@ -39,19 +110,141 @@ CodeLab.HelloWorld.slnx
 ```
 
 ### Architecture Selection
-Choose based on project complexity — never force one architecture everywhere:
 
-| Complexity | Architecture |
+Separation of Concerns is the requirement. A named architecture is one way to get it, not
+the goal. Start at the smallest structure that separates the concerns this project
+actually has, and add structure only when a concrete pressure demands it.
+
+| Pressure you actually have | Structure that answers it |
 |---|---|
-| Simple CRUD | Minimal layering, direct service calls |
-| Medium | Clean Architecture (Domain, Application, Infrastructure, Api) |
-| Feature-heavy | Vertical Slice (plain/custom handlers — no mediator by default) |
-| Large/distributed | Clean + DDD + CQRS |
+| CRUD over a few tables | One project. Separate endpoint / service / data access as classes, not projects. |
+| Business rules worth protecting from EF and HTTP | Split the domain out; keep infrastructure behind interfaces it defines |
+| Many independent features, low shared logic | Vertical slices — one folder per feature, plain handlers |
+| Read and write models genuinely diverge | CQRS on the paths where they diverge, not repo-wide |
+| A rich, invariant-heavy domain | DDD tactical patterns where the invariants live |
 
-Support for: **Clean Architecture, Vertical Slice, Hexagonal/Onion, DDD** — pick what fits.
+Clean Architecture, Hexagonal/Onion, Vertical Slice and DDD are all acceptable. What is
+not acceptable is adopting one wholesale before the pressure exists.
 
-Default VSA to plain handlers. Reach for **WolverineFx** only when you genuinely want its
-messaging/mediator features — never as a default (KISS, and the same reasoning behind avoiding MediatR).
+**Signals you have over-engineered:** projects that only pass calls through, an interface
+per class, a mediator dispatching to a single handler, DTOs that mirror entities field for
+field. Collapse them.
+
+**Mediator libraries** (MediatR, WolverineFx): use only for what they uniquely provide —
+messaging, queuing, out-of-process dispatch, or pipeline behaviors you actually use.
+In-process request/response is a method call.
+
+---
+
+## Project & Build Configuration
+
+Repo-wide settings belong in repo-wide files. Copy-pasting the same property into twenty
+`.csproj` files is the MSBuild equivalent of not having a constant.
+
+| File | Scope | Holds |
+|---|---|---|
+| `global.json` | Repo | SDK version pin + `rollForward` policy |
+| `Directory.Build.props` | All projects below it | `TargetFramework`, `LangVersion`, `Nullable`, analyzers |
+| `Directory.Build.targets` | All projects below it | Custom targets, conditional tweaks |
+| `Directory.Packages.props` | Repo | Central Package Management — every package version, once |
+| `NuGet.config` | Repo | Feeds and `packageSourceMapping` |
+| `.editorconfig` | Repo | Style rules + analyzer severity |
+| `*.csproj` | One project | Only what is genuinely project-specific |
+
+### The common baseline
+
+```xml
+<!-- Directory.Build.props -->
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>14</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+  </PropertyGroup>
+</Project>
+```
+
+Each `.csproj` then carries only what differs — its `OutputType`, its `ProjectReference`s,
+its `IsPackable`.
+
+### Test projects relax the warning gate
+
+`TreatWarningsAsErrors` belongs on production code. In test projects it mostly fires on
+things tests do deliberately — nullability in arrange blocks, unused locals, deliberately
+obsolete APIs under test — so it costs time without catching bugs. Turn it off there, and
+keep the analyzers running as warnings.
+
+```xml
+<!-- tests/Directory.Build.props — sits beside the test projects -->
+<Project>
+  <!-- Import the root file first, then override it. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove($(MSBuildThisFileFile), $(MSBuildThisFileDirectory)..))" />
+
+  <PropertyGroup>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <IsPackable>false</IsPackable>
+    <!-- Common in tests and not worth failing a build over. -->
+    <NoWarn>$(NoWarn);CS1591;CA1707;xUnit1041</NoWarn>
+  </PropertyGroup>
+</Project>
+```
+
+> **Why a folder-scoped file and not `Condition="'$(IsTestProject)' == 'true'"` in the root
+> props:** `IsTestProject` is set by `Microsoft.NET.Test.Sdk`, which is imported *after*
+> `Directory.Build.props` is evaluated — so that condition is silently false at the moment
+> it's read. Either scope by folder as above, or put the override in
+> `Directory.Build.targets`, which MSBuild evaluates late enough for `IsTestProject` to
+> exist.
+
+### Central Package Management
+
+`Directory.Packages.props` removes version drift between projects — the most common cause
+of "builds in the API, fails in Tests".
+
+```xml
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="ErrorOr" Version="2.0.1" />
+  </ItemGroup>
+</Project>
+```
+
+Projects then reference without a version: `<PackageReference Include="ErrorOr" />`.
+
+### Pin the SDK
+
+```json
+// global.json
+{ "sdk": { "version": "10.0.100", "rollForward": "latestFeature" } }
+```
+
+Without it, CI and each developer machine can silently build on different SDKs.
+
+### NuGet policy
+
+- **Pin an exact version** — `10.0.1`, never a wildcard (`*`, `2.*`, `10.0.*`)
+- **Stable only**, runtime and test alike — no `rc` / `preview` / `beta`. One version
+  behind beats a prerelease.
+- **`packageSourceMapping`** in `NuGet.config` whenever you use a feed besides nuget.org —
+  it is the defense against dependency-confusion attacks
+- Update deliberately, not automatically; record intentional pins where the team finds them
+- `dotnet list package --vulnerable --include-transitive` in CI
+
+### Analyzers and formatting
+
+- `EnableNETAnalyzers` + `AnalysisLevel` are built in — no package required
+- `.editorconfig` carries style and per-rule severity. Escalate a rule to `error` only when
+  the team will actually fix it, or `TreatWarningsAsErrors` becomes noise people suppress.
+- `dotnet format --verify-no-changes` in CI catches drift
+- SonarAnalyzer / Roslynator / Husky.NET / BenchmarkDotNet are optional additions, never
+  requirements — add one when it answers a problem you have
 
 ---
 
@@ -98,13 +291,22 @@ var result = player switch
 
 ---
 
-## Async Rules
-- **Async all the way down** — controller → service → repository → DB
-- **Always pass `CancellationToken`** through the entire chain
-- **No `ConfigureAwait(false)`** — unnecessary in ASP.NET Core
-- **No `async void`** — use `async Task`
-- **No `.Result` / `.Wait()`** — always `await`
-- **No fire-and-forget** without proper exception handling
+## Async
+
+- **Async all the way down** — endpoint → service → repository → DB
+- **Always flow `CancellationToken`** through the entire chain
+- **No `async void`** — use `async Task`. The one exception is an event handler, which
+  must then catch everything inside; an escaping exception there kills the process.
+- **No `.Result` / `.Wait()` / `.GetAwaiter().GetResult()`** — always `await`
+- **No fire-and-forget** without exception handling. Background work belongs in an
+  `IHostedService` / `BackgroundService`, not a discarded `Task`.
+
+### `ConfigureAwait` — depends on the project type
+
+| Project | Guidance |
+|---|---|
+| ASP.NET Core app | Omit it. There is no synchronization context, so it does nothing. |
+| **Class library** | Use `ConfigureAwait(false)` — the library cannot know its caller has no context. This is Microsoft's guidance and is **not** an anti-pattern. |
 
 ```csharp
 // ✅ Correct async pattern
@@ -117,6 +319,89 @@ public async Task<PlayerDto?> GetPlayerAsync(Guid id, CancellationToken cancella
         .FirstOrDefaultAsync(cancellationToken);
 }
 ```
+
+### Parallel and hot paths
+
+```csharp
+// ✅ Independent work in parallel — start both, then await
+var playersTask = _playerRepo.GetAllAsync(cancellationToken);
+var teamsTask   = _teamRepo.GetAllAsync(cancellationToken);
+await Task.WhenAll(playersTask, teamsTask);
+var players = await playersTask;
+var teams   = await teamsTask;
+
+// ✅ ValueTask<T> for hot paths that usually complete synchronously (e.g. a cache hit).
+//    Await it exactly once, never store it.
+public ValueTask<Player?> GetCachedPlayerAsync(Guid id, CancellationToken cancellationToken);
+
+// ✅ await using for IAsyncDisposable
+await using var stream = new FileStream(path, FileMode.Open);
+```
+
+`Task.WhenAll` surfaces only the first exception when awaited directly — inspect
+`task.Exception` or await each task when you need all of them.
+
+---
+
+## Time — `DateTime`, `DateTimeOffset`, `TimeProvider`
+
+### Choosing the type
+
+| Use | Type |
+|---|---|
+| An instant in time (created, expires, logged) | `DateTimeOffset` — carries the offset, unambiguous |
+| A calendar date with no time (birthday, check-in) | `DateOnly` — no fake midnight |
+| A wall-clock time with no date (opening hours) | `TimeOnly` |
+| A duration | `TimeSpan` |
+| A future local time in a named zone (scheduling, recurrence) | Store the local time **plus the IANA zone id**, resolve with `TimeZoneInfo` |
+
+Persist instants in **UTC**. Convert to a user's zone only at the presentation edge.
+`DateTime` with `Kind` is legacy — prefer `DateTimeOffset` for new code, and never let a
+`DateTime.Kind` of `Unspecified` cross a boundary.
+
+A UTC instant is not enough for future events: "09:00 next March in Lisbon" must survive a
+DST rule change, which only the zone id preserves.
+
+### `TimeProvider` (net8.0+) — inject the clock
+
+Reading `DateTime.UtcNow` directly inside business logic makes that logic untestable —
+you cannot write a test for "expires after 30 days" without waiting or hacking the system
+clock. Depend on `TimeProvider` instead.
+
+```csharp
+// ✅ Injected clock — testable
+public class SubscriptionService(TimeProvider timeProvider)
+{
+    public bool IsExpired(Subscription subscription) =>
+        subscription.ExpiresAt <= timeProvider.GetUtcNow();
+}
+
+// Registration
+builder.Services.AddSingleton(TimeProvider.System);
+
+// Test — Microsoft.Extensions.TimeProvider.Testing
+var time = new FakeTimeProvider(DateTimeOffset.Parse("2026-01-01T00:00:00Z"));
+var sut  = new SubscriptionService(time);
+time.Advance(TimeSpan.FromDays(31));
+sut.IsExpired(subscription).ShouldBeTrue();
+```
+
+`TimeProvider` also abstracts the things that are otherwise untestable:
+
+```csharp
+await Task.Delay(TimeSpan.FromMinutes(5), timeProvider, cancellationToken);
+using var timer = timeProvider.CreateTimer(callback, state, dueTime, period);
+```
+
+**Use `TimeProvider` for:** expiry and TTL logic, scheduling, retry/backoff, timers,
+delays, audit timestamps, and any time-dependent branch you want to test.
+
+**Don't bother for:** logging timestamps (the logger stamps them), `[CreatedAt]` columns
+the database defaults, or one-off scripts. `TimeProvider` replaces *ambient clock reads in
+logic under test* — it does not replace `DateTime`/`DateTimeOffset` as types.
+
+For a project below net8.0, use a small `IClock` interface with the same shape, and
+migrate to `TimeProvider` when the target moves.
 
 ---
 
@@ -203,26 +488,84 @@ public async Task<ErrorOr<PlayerDto>> GetAsync(Guid id, CancellationToken cancel
 return result.Match(Results.Ok, errors => errors.ToProblem());
 ```
 
-- **`ErrorOr` is the one result type** — never hand-roll a custom `Result<T>`
 - **Never throw for business flow control** — no `PlayerNotFoundException`, no `DuplicateEmailException`
 - Exceptions are for the **unexpected only** — infrastructure failures and bugs
+- **One result type per solution.** The rule is consistency, not the brand.
 
-### Global Exception Middleware
-Catches the unexpected only — everything business-level already returned an `Error`.
+### When `ErrorOr` isn't available
 
-- One middleware handles all unhandled exceptions
-- Per-type handling — each exception type maps to a specific HTTP response
-- Never catch base `Exception` and swallow it
-- Never throw generic `Exception` — always specific types
+Some projects can't take the dependency — an approval process, an air-gapped feed, a
+policy against third-party packages. That's a legitimate reason to hand-roll, and the
+fallback is a **minimal** result type, not a framework.
+
+```csharp
+public readonly record struct Error(string Code, string Description);
+
+public readonly struct Result<T>
+{
+    private readonly T? _value;
+    private Result(T value)   { _value = value; Error = null; IsError = false; }
+    private Result(Error err) { _value = default; Error = err; IsError = true; }
+
+    public bool IsError { get; }
+    public Error? Error { get; }
+    public T Value => IsError
+        ? throw new InvalidOperationException("No value on a failed result.")
+        : _value!;
+
+    public static Result<T> Ok(T value)     => new(value);
+    public static Result<T> Fail(Error err) => new(err);
+
+    public static implicit operator Result<T>(T value)   => Ok(value);
+    public static implicit operator Result<T>(Error err) => Fail(err);
+
+    public TOut Match<TOut>(Func<T, TOut> onSuccess, Func<Error, TOut> onError) =>
+        IsError ? onError(Error!.Value) : onSuccess(_value!);
+}
+```
+
+Keep it to that shape: implicit conversions so returns stay terse, and `Match` so
+endpoints map to `ProblemDetails` the same way. **Don't** grow it into a full monad —
+no `Bind`, `Then`, `Tap`, or `Map` chains unless the codebase genuinely uses them.
+
+**Decide once, at the solution level.** Two result types in one codebase is worse than
+either alone. If `ErrorOr` is already present, use it and delete the hand-rolled one.
+
+### Exceptions — the unexpected only
+
+Anything a caller could reasonably expect is an `Error` value. Exceptions are for
+programmer mistakes, broken invariants, and infrastructure failures.
 
 ```csharp
 // ✅ Specific, and only for the genuinely exceptional
-throw new ArgumentNullException(nameof(player));
-ArgumentNullException.ThrowIfNull(param);
+ArgumentNullException.ThrowIfNull(player);
+ArgumentOutOfRangeException.ThrowIfNegative(quantity);
+
+// ✅ Preserve the stack trace when rethrowing
+catch (DbUpdateException ex)
+{
+    _logger.LogError(ex, "Failed to persist player {PlayerId}", id);
+    throw;              // not `throw ex;`
+}
 
 // ❌ Never
-throw new Exception("something went wrong");
+throw new Exception("something went wrong");        // always a specific type
+throw new PlayerNotFoundException(id);              // business flow → PlayerErrors.NotFound
+catch (Exception ex) { /* swallowed */ }
 ```
+
+- **No custom exceptions for domain errors** — "not found" is an `Error`, not a `throw`
+- **Don't catch what you can't handle** — let it reach the global handler
+- **Log then rethrow, OR handle** — never both, or you double-log
+
+### Global exception middleware
+
+Use `IExceptionHandler` (net8.0+) registered via `AddExceptionHandler`, or
+`UseExceptionHandler` on older targets.
+
+- One place maps unhandled exceptions to `ProblemDetails`
+- Map per exception type; never leak stack traces or internal detail to clients
+- Return `500` for the genuinely unexpected — a handled business failure never gets here
 
 ---
 
@@ -321,7 +664,62 @@ Log.Information("Player {PlayerId} created with email {Email}", id, email);
 
 ## Testing
 
-**Stack:** xUnit v3, NSubstitute, AutoFixture, AutoFixture.AutoNSubstitute, Testcontainers, Shouldly
+| Package | Role |
+|---|---|
+| `xunit.v3` | Test framework |
+| `NSubstitute` | Substitutes for boundaries |
+| `AutoFixture` | Generates anonymous test data — kills Arrange boilerplate |
+| `AutoFixture.AutoNSubstitute` | Turns AutoFixture into an auto-mocking container (NSubstitute-backed) |
+| `AutoFixture.Xunit3` | `[Theory, AutoData]` / `[InlineAutoData]` for **xUnit v3** |
+| `Testcontainers` | Real dependencies in Docker for integration tests |
+| `Shouldly` | Assertions |
+
+> **Pick the adapter that matches your xUnit major version.** `AutoFixture.Xunit2` is for
+> xUnit v2; **`AutoFixture.Xunit3` is the one for xUnit v3**. Mixing them gives a test
+> project that compiles but discovers no theories.
+>
+> **Stay on AutoFixture 4.x.** As of August 2026, 4.x is the stable line
+> (`AutoFixture` / `AutoFixture.AutoNSubstitute` 4.18.1, `AutoFixture.Xunit3` 4.19.0);
+> **5.0.0 has only ever shipped as `-preview`**, so it is barred by the NuGet policy above.
+> Minor-version skew *between* AutoFixture family packages is normal — don't force them to
+> a single version. 4.x targets netstandard2.0/net8.0 and runs fine on .NET 10.
+
+### Auto-mocking with AutoFixture + NSubstitute
+
+```csharp
+// Option A — explicit fixture, full control
+var fixture = new Fixture().Customize(new AutoNSubstituteCustomization
+{
+    ConfigureMembers = true   // substitute members return AutoFixture-generated values
+});
+var repository = fixture.Freeze<IPlayerRepository>();  // same instance the SUT receives
+var sut = fixture.Create<PlayerService>();             // dependencies auto-substituted
+
+// Option B — declarative, via a reusable attribute
+public class AutoNSubstituteDataAttribute()
+    : AutoDataAttribute(() => new Fixture().Customize(new AutoNSubstituteCustomization()));
+
+[Theory, AutoNSubstituteData]
+public async Task GetPlayer_WhenMissing_ReturnsNotFound(
+    [Frozen] IPlayerRepository repository,   // [Frozen] = the instance the SUT gets
+    PlayerService sut,                        // built with the frozen substitute
+    Guid playerId)                            // anonymous data, no hand-written setup
+{
+    repository.GetAsync(playerId, Arg.Any<CancellationToken>()).Returns((Player?)null);
+
+    var result = await sut.GetAsync(playerId, CancellationToken.None);
+
+    result.IsError.ShouldBeTrue();
+}
+```
+
+`[Frozen]` is the piece that matters: it pins one instance for a type so the substitute you
+configure is the same one injected into the SUT. Without it you configure a different
+object than the code under test uses.
+
+**Where AutoFixture pays off:** wide constructors, DTOs with many properties, and values the
+test doesn't care about. **Where to skip it:** when the specific value *is* the point —
+write the literal, so the test reads as its own documentation.
 
 ```csharp
 // ✅ Arrange-Act-Assert always
@@ -346,17 +744,23 @@ public async Task GetPlayer_WhenExists_ReturnsPlayerDto()
 - Test **behavior**, not implementation — tests must survive refactors
 - **Unit tests** — mock boundaries (external APIs), not internals
 - **Integration tests** — `WebApplicationFactory` + Testcontainers (real PostgreSQL in Docker)
-- Use **AutoFixture** to reduce setup duplication
-- No flaky tests — no time-dependent or order-dependent tests
-- Tests written **after** implementation
+- Use **AutoFixture** for values the test doesn't care about; write literals for the ones it does
+- No flaky tests — no time-dependent or order-dependent tests. Inject `TimeProvider`
+  instead of reading the clock, and never `Thread.Sleep` to wait for something.
+- **When** tests get written (before, after, alongside) is a team choice, not a rule here.
+  What matters is that the failure paths are covered before the change ships.
 
 ---
 
 ## Security
 
-- **JWT** preferred for auth (project-dependent)
-- **HMACSHA256** or stronger for token hashing
-- **Never** hardcode secrets — Azure Key Vault **or** AWS Secrets Manager in prod, User Secrets locally
+- **Use the platform's auth**, don't build your own — ASP.NET Core Identity, an OIDC
+  provider, or JWT bearer, whichever fits. Never hand-roll password hashing or token
+  signing.
+- **Passwords:** ASP.NET Core Identity's hasher, or Argon2/PBKDF2 with a per-user salt.
+  Plain `HMACSHA256` is for signing/HMAC, **not** for storing passwords.
+- **Never** hardcode secrets — a managed secret store in prod (Azure Key Vault, AWS
+  Secrets Manager, or the platform equivalent), User Secrets locally
 - **Always** parameterize SQL (EF Core / Dapper handle this)
 - **HTTPS** everywhere — redirect HTTP, set HSTS
 - **CORS whitelist** — never `AllowAnyOrigin()` in production
@@ -368,24 +772,47 @@ public async Task GetPlayer_WhenExists_ReturnsPlayerDto()
 
 ## Packages Reference
 
-| Purpose | Package |
-|---|---|
-| Validation | FluentValidation |
-| API Docs | Scalar.AspNetCore |
-| Vertical Slice | Plain/custom handlers (WolverineFx only if you need messaging/mediator) |
-| Logging | Serilog |
-| Tracing | OpenTelemetry |
-| Testing | xUnit v3, NSubstitute, AutoFixture, AutoFixture.AutoNSubstitute, Testcontainers, Shouldly |
-| Resilience | Polly |
-| Mapping | Facet |
-| Fake data | Bogus |
-| Result pattern | **ErrorOr** — the one result type, never hand-rolled |
+Starting points, not mandates. **Prefer what the platform already gives you** — a package
+must earn its place. An existing project's choices always win over this table.
 
-### NuGet Policy
-- **Pin the latest specific version** — `10.0.1`, never wildcards (`*`, `2.*`, `10.0.*`)
-- **Stable releases only**, runtime *and* test — never `rc` / `preview` / `beta`
-- Staying one version behind beats shipping a prerelease
-- Check for updates periodically, not automatically; record deliberate pins in an ADR
+| Purpose | Default | In the box already? |
+|---|---|---|
+| Result pattern | **ErrorOr**; a minimal hand-rolled `Result<T>` when it can't be referenced | no |
+| Validation | FluentValidation | DataAnnotations covers simple cases |
+| Logging | `Microsoft.Extensions.Logging`; Serilog for richer sinks | yes |
+| Tracing / metrics | OpenTelemetry | yes (`System.Diagnostics`) |
+| HTTP resilience | `Microsoft.Extensions.Http.Resilience` (wraps Polly) | yes, as a MS package |
+| Serialization | `System.Text.Json` + source generation | yes |
+| API docs | `Microsoft.AspNetCore.OpenApi`, rendered by Scalar or Swagger UI | yes (OpenAPI) |
+| Testing | xUnit, NSubstitute, Testcontainers, Shouldly/`Assert` | no |
+| Fake data | Bogus | no |
+| Mapping | Hand-written, or a source-generated mapper (Mapperly, Facet) | — |
+
+**Mapping:** a record projection written by hand is usually clearer and faster than any
+mapper. Reach for a source-generated mapper only when the mappings are numerous and dull.
+Avoid reflection-based mappers — they defeat trimming and hide breaking changes.
+
+### Serialization
+
+```csharp
+// ✅ Source-generated context — faster, allocation-free, and trim/AOT-safe
+[JsonSerializable(typeof(PlayerDto))]
+internal partial class AppJsonContext : JsonSerializerContext;
+
+builder.Services.ConfigureHttpJsonOptions(o =>
+    o.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonContext.Default));
+```
+
+Reflection-based `System.Text.Json` still works, but source generation is the default for
+new code and is **required** under trimming or Native AOT.
+
+### Trimming and Native AOT
+
+Only relevant if you actually publish trimmed or AOT (small containers, fast cold start,
+CLI tools). When you do: set `<PublishTrimmed>` / `<PublishAot>`, use source-generated
+JSON and logging, and expect reflection-heavy libraries (many mappers, some ORMs and DI
+extensions) to break. Minimal APIs support AOT; MVC does not. Don't enable it
+speculatively — it constrains every library choice downstream.
 
 ---
 
@@ -427,7 +854,7 @@ See full list in references/antipatterns.md
 - ❌ Long-lived `DbContext`
 - ❌ Static everything — makes testing hell
 - ❌ Service Locator pattern — use constructor injection
-- ❌ Hand-rolled `Result<T>` — `ErrorOr` is the one result type
+- ❌ *Two* result types in one solution — pick one (`ErrorOr`, else a minimal custom `Result<T>`)
 - ❌ Exceptions for business flow control — return an `Error`
 - ❌ Wildcard or prerelease NuGet versions — pin the latest stable
 
@@ -488,36 +915,6 @@ public async Task<ErrorOr<PlayerDto>> UpdatePlayerAsync(Guid id, UpdatePlayerReq
 
 ---
 
-## Exception Handling
-
-Exceptions cover the **unexpected only**. Anything a caller could reasonably expect is an `ErrorOr` value — see [Error Handling](#error-handling--erroror).
-
-```csharp
-// ✅ Specific, and only for genuine programmer/infrastructure errors
-throw new ArgumentNullException(nameof(user));
-
-// ✅ .NET 6+ null guard
-ArgumentNullException.ThrowIfNull(param);
-
-// ✅ Preserve stack trace
-catch (Exception ex)
-{
-    _logger.LogError(ex, "Failed to process player {PlayerId}", id);
-    throw; // not throw ex;
-}
-
-// ❌ Never
-throw new Exception("something went wrong");
-throw new PlayerNotFoundException(id);   // ← business flow, use PlayerErrors.NotFound
-catch (Exception ex) { /* swallowed */ }
-```
-
-- **No custom exceptions for domain errors** — `PlayerNotFoundException` is an `Error`, not a `throw`
-- **Don't catch what you can't handle** — let it bubble to global handler
-- **Never use exceptions for flow control** — return `ErrorOr<T>` instead
-- **Log then re-throw OR handle** — never both (double-logging)
-
----
 
 ## Null Handling
 
@@ -590,28 +987,42 @@ services.AddOptions<JwtOptions>()
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
-// ✅ IOptionsSnapshot<T> when you need config reload without restart
+// ✅ IOptionsSnapshot<T> (scoped) for reload without restart;
+//    IOptionsMonitor<T> when a singleton needs to observe changes
 ```
 
----
+### Keyed services (net8.0+)
 
-## Advanced Async
+Several implementations of one interface, chosen by key — replaces the hand-rolled
+factory/switch that used to be necessary.
 
 ```csharp
-// ✅ Task.WhenAll for independent parallel operations
-var (players, teams) = await (
-    _playerRepo.GetAllAsync(cancellationToken),
-    _teamRepo.GetAllAsync(cancellationToken)
-);
+services.AddKeyedScoped<IPaymentProvider, StripeProvider>("stripe");
+services.AddKeyedScoped<IPaymentProvider, PayPalProvider>("paypal");
 
-// ✅ ValueTask<T> for hot paths with cached/sync results
-public ValueTask<Player?> GetCachedPlayerAsync(Guid id, CancellationToken cancellationToken);
+public class CheckoutService([FromKeyedServices("stripe")] IPaymentProvider provider);
+```
 
-// ✅ await using for IAsyncDisposable
-await using var stream = new FileStream(...);
+Use it when the key is genuinely static. When the key is chosen at runtime from data,
+inject `IServiceProvider` and call `GetRequiredKeyedService`, or keep a small explicit
+factory — that stays easier to test.
+
+### Validate the container
+
+`ValidateOnBuild` + `ValidateScopes` turn captive dependencies and missing registrations
+into startup failures instead of production surprises. Both are on by default in
+Development; enable them everywhere.
+
+```csharp
+builder.Host.UseDefaultServiceProvider(o =>
+{
+    o.ValidateOnBuild = true;
+    o.ValidateScopes  = true;
+});
 ```
 
 ---
+
 
 ## Advanced EF Core Patterns
 
@@ -659,27 +1070,6 @@ public class TenantContext(IHttpContextAccessor accessor)
 
 ---
 
-## Logging Patterns
-
-```csharp
-// ✅ Structured logging — named properties
-_logger.LogInformation("Token created for {TenantId} by {UserId}", tenantId, userId);
-
-// ❌ Never string interpolation in logs — breaks structured logging
-_logger.LogInformation($"Token created for {tenantId}"); // wrong
-
-// ✅ Log scopes for contextual correlation
-using (_logger.BeginScope(new { RequestId, TenantId }))
-{
-    // all logs inside carry RequestId + TenantId
-}
-
-// ✅ Source generators for zero-allocation high-perf logging
-[LoggerMessage(Level = LogLevel.Information, Message = "Player {PlayerId} created")]
-partial void LogPlayerCreated(Guid playerId);
-```
-
----
 
 ## Code Smells to Watch
 
@@ -692,20 +1082,6 @@ partial void LogPlayerCreated(Guid playerId);
 - **Train wrecks** — `obj.A().B().C().D()` — Law of Demeter violation
 
 ---
-
-## Tooling & Quality
-
-```xml
-<!-- .csproj — treat warnings as errors -->
-<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-<Nullable>enable</Nullable>
-```
-
-- **`.editorconfig`** — enforce style across the team
-- **`Microsoft.CodeAnalysis.NetAnalyzers`** + `SonarAnalyzer` + `Roslynator`
-- **`dotnet format`** in CI to catch drift
-- **Husky.NET** for pre-commit hooks
-- **BenchmarkDotNet** for performance — measure, don't guess
 
 ---
 
@@ -737,160 +1113,18 @@ private readonly object _lock = new();
 
 ---
 
-## Modern C# Goodies — C# 14
+## Modern C# — C# 14
 
-### Extension Members (C# 14 headline feature)
-```csharp
-// ✅ Extension blocks — add properties, operators, statics to any type
-// Previously only extension methods were possible
-extension(Player player)
-{
-    // Extension property
-    public bool IsEligibleForPromotion =>
-        player.IsActive && player.Score > 1000;
+Extension members, the `field` keyword, null-conditional assignment, partial
+constructors, implicit span conversions, `nameof` on unbound generics.
 
-    // Extension method alongside property
-    public string GetDisplayName() =>
-        $"{player.Name} ({player.Email})";
-}
+Full detail with examples: `references/csharp-14.md` — load it when the task calls for
+these features. Gate every one on `LangVersion` 14.
 
-// Static extension members
-extension(Player)
-{
-    public static Player CreateGuest() =>
-        new(Guid.NewGuid(), "Guest", "guest@example.com");
-}
-
-// Use like native members
-if (player.IsEligibleForPromotion) { }
-var guest = Player.CreateGuest();
-```
-
-### `field` Keyword (C# 14)
-```csharp
-// ✅ Validate in setter without a manual backing field
-public class PlayerProfile
-{
-    public string Name
-    {
-        get;
-        set => field = value?.Trim()
-            ?? throw new ArgumentNullException(nameof(value));
-    }
-
-    public int Score
-    {
-        get;
-        set => field = value >= 0
-            ? value
-            : throw new ArgumentOutOfRangeException(nameof(value));
-    }
-}
-// ❌ Old way — manual backing field boilerplate
-// private string _name;
-// public string Name { get => _name; set => _name = value ?? throw ...; }
-```
-
-### Null-Conditional Assignment (C# 14)
-```csharp
-// ✅ Assign only when not null — cleaner null guards
-customer?.Order = GetCurrentOrder();
-player?.Score += bonusPoints;
-
-// ❌ Old way
-if (customer is not null) customer.Order = GetCurrentOrder();
-```
-
-### Partial Constructors & Events (C# 14)
-```csharp
-// ✅ Clean source generator integration
-// Hand-written file
-public partial class Player
-{
-    public partial Player(string name, string email);
-    public string Name { get; }
-    public string Email { get; }
-}
-
-// Source-generated file
-public partial class Player
-{
-    public partial Player(string name, string email)
-    {
-        Name = name;
-        Email = email;
-    }
-}
-```
-
-### Lambda Parameter Modifiers Without Types (C# 14)
-```csharp
-// ✅ Cleaner lambda signatures — no need to repeat types
-TryParse<int> parse = (text, out result) => int.TryParse(text, out result);
-
-// ❌ Old way — types required when using modifiers
-TryParse<int> parse = (string text, out int result) => int.TryParse(text, out result);
-```
-
-### Implicit Span Conversions (C# 14)
-```csharp
-// ✅ Arrays, spans and read-only spans convert implicitly — less ceremony
-void Process(ReadOnlySpan<byte> data) { }
-
-byte[] bytes = [1, 2, 3];
-Process(bytes); // ← implicit conversion, no .AsSpan() needed
-```
-
-### `nameof` on Unbound Generics (C# 14)
-```csharp
-// ✅ No need for a closed generic type just to get the name
-var name = nameof(List<>); // "List"
-
-// ❌ Old way
-var name = nameof(List<int>); // "List" — needed a type arg just for the name
-```
-
-### Everything from Before — Still Apply
-```csharp
-// ✅ nameof() — refactor-safe
-throw new ArgumentNullException(nameof(user));
-
-// ✅ Target-typed new()
-List<Player> players = new();
-
-// ✅ Collection expressions (.NET 8+)
-int[] ids = [1, 2, 3];
-
-// ✅ is not null
-if (player is not null) { }
-
-// ✅ Pattern matching
-var result = player switch
-{
-    { IsActive: true, Score: > 1000 } => "Elite",
-    { IsActive: true } => "Active",
-    _ => "Inactive"
-};
-
-// ✅ Source generators — logging, JSON, regex, mapping
-[LoggerMessage(Level = LogLevel.Information, Message = "Player {PlayerId} created")]
-partial void LogPlayerCreated(Guid playerId);
-
-[GeneratedRegex(@"^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$")]
-private static partial Regex EmailRegex();
-```
-
-### `.csproj` — Always Set
-```xml
-<PropertyGroup>
-  <TargetFramework>net10.0</TargetFramework>
-  <LangVersion>14</LangVersion>
-  <Nullable>enable</Nullable>
-  <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-</PropertyGroup>
-```
-
----
 
 ## References
-- `references/antipatterns.md` — Full anti-patterns list (load when doing code review)
+
+Load on demand — not part of the baseline context.
+
+- `references/antipatterns.md` — full anti-patterns list (load for code review)
+- `references/csharp-14.md` — C# 14 language features (load when using them)

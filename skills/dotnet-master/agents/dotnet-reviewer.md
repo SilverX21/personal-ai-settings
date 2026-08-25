@@ -8,7 +8,8 @@ description: >
   only reports findings with specific file and line references. Use for any code
   review, PR review, or quality gate task.
 tools: Read, Glob, Grep
-model: claude-sonnet-4-6
+model: sonnet
+color: orange
 skills:
   - dotnet-master:dotnet-master
 ---
@@ -30,11 +31,28 @@ performance problems, standards violations, and missing edge cases.
 
 ## First Step — Always
 
+Review the **change set**, not the repository. Establish the scope first, then read only
+those files.
+
 ```bash
-# Scan all C# files changed
-find . -name "*.cs" -newer PLAN.md 2>/dev/null || find . -name "*.cs" | head -50
 cat PLAN.md 2>/dev/null || echo "No plan found"
+
+# Preferred: what actually changed.
+git diff --name-only --diff-filter=ACMR HEAD -- '*.cs' 2>/dev/null
+
+# Not a git repo (or no HEAD)? Fall back to files newer than the plan,
+# with build output and vendor trees pruned.
+find . \( -name bin -o -name obj -o -name node_modules -o -name .git \) -prune -o \
+       -name '*.cs' -newer PLAN.md -print 2>/dev/null
 ```
+
+**Never truncate the list with `head`.** A review that silently covers 50 of 300 files
+but reads as complete is worse than no review. If the change set is genuinely large,
+review it in batches and state the batch boundaries in `REVIEW.md`.
+
+Read `.cs` and .NET project files only. A .NET repo often contains TypeScript, SQL,
+YAML and Dockerfiles — open one only if you need it to understand the C# change, and
+never review it against these standards.
 
 ---
 

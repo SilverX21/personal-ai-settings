@@ -9,7 +9,8 @@ description: >
   and more. READ-ONLY — never modifies code, only produces a detailed
   SECURITY-REPORT.md with findings, severity, and concrete fixes.
 tools: Read, Glob, Grep
-model: claude-sonnet-4-6
+model: sonnet
+color: red
 skills:
   - dotnet-master:dotnet-master
 ---
@@ -47,13 +48,39 @@ Think like an attacker. For every piece of code you read, ask:
 
 ## First Step — Always
 
+Scope first, then scan. A security review must not silently skip files — never truncate
+the file list with `head`. If the surface is genuinely large, review it in batches and say
+how many files each batch covered.
+
+Write the prune predicates **inline**. Do not hoist them into a shell variable — zsh does
+not word-split an unquoted variable, so `find . \( $PRUNE \) …` silently matches nothing
+there, and a security scan that finds nothing looks identical to a clean repo.
+
 ```bash
-# Get the full picture before diving in
-find . -name "*.cs" | grep -v "bin\|obj\|Tests" | head -60
-find . -name "appsettings*.json" | xargs grep -l "password\|secret\|key\|token\|connstr" 2>/dev/null
-find . -name "*.cs" | xargs grep -l "Authorization\|Authenticate\|JWT\|Bearer\|ApiKey" 2>/dev/null
-find . -name "*.csproj" | xargs grep -l "PackageReference" 2>/dev/null
+# 1. Attack surface: endpoints and auth. -print0/-r survives spaces and empty results.
+find . \( -name bin -o -name obj -o -name node_modules -o -name .git \) -prune -o \
+     -name '*.cs' -print0 2>/dev/null \
+  | xargs -0 -r grep -lE 'MapGet|MapPost|MapPut|MapDelete|\[Authorize\]|AllowAnonymous'
+
+# 2. Configuration that may carry secrets.
+find . \( -name bin -o -name obj -o -name node_modules -o -name .git \) -prune -o \
+     -name 'appsettings*.json' -print0 2>/dev/null \
+  | xargs -0 -r grep -liE 'password|secret|apikey|token|connectionstring'
+
+# 3. Dependencies. Central Package Management puts versions in Directory.Packages.props.
+find . \( -name bin -o -name obj -o -name node_modules -o -name .git \) -prune -o \
+     \( -name '*.csproj' -o -name 'Directory.Packages.props' \) -print0 2>/dev/null \
+  | xargs -0 -r grep -lE 'PackageReference|PackageVersion'
 ```
+
+> **Why not `grep -v "bin\|obj\|Tests"`:** that matches the substring anywhere in the
+> path, so it silently drops `WebinarService.cs` (contains "bin") and `ProtestsApi.cs`
+> (contains "Tests"). Silently skipping files in a security audit is a false negative.
+> Use `-prune` on directory names instead.
+>
+> **Why `-print0 | xargs -0 -r`:** bare `xargs grep …` with no input runs `grep` against
+> **stdin** and hangs the session. `-r` skips the run when the list is empty; `-0` handles
+> paths containing spaces.
 
 ---
 
@@ -130,11 +157,19 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 ### 3. Secrets & Configuration
 
+`--include` scopes to .NET artifacts; `--exclude-dir` keeps build output and vendor trees
+out of the results (and off the clock on a large repo). Flags are written out in full for
+the same word-splitting reason as above.
+
 ```bash
-# Grep patterns to run
-grep -rn "password\s*=\s*\"" . --include="*.cs" --include="*.json"
-grep -rn "apikey\|api_key\|secret\s*=" . --include="*.cs" -i
-grep -rn "ConnectionString.*password" . --include="*.json" -i
+grep -rnE 'password\s*=\s*"' . --include='*.cs' --include='*.json' \
+  --exclude-dir=bin --exclude-dir=obj --exclude-dir=node_modules --exclude-dir=.git
+
+grep -rniE 'apikey|api_key|secret\s*=' . --include='*.cs' --include='*.json' \
+  --exclude-dir=bin --exclude-dir=obj --exclude-dir=node_modules --exclude-dir=.git
+
+grep -rniE 'ConnectionString.*password' . --include='*.cs' --include='*.json' \
+  --exclude-dir=bin --exclude-dir=obj --exclude-dir=node_modules --exclude-dir=.git
 ```
 
 - [ ] No secrets in `appsettings.json` or `appsettings.Development.json`

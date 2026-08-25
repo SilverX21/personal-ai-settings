@@ -7,7 +7,8 @@ description: >
   AutoFixture, Testcontainers, and Shouldly. Tests behavior not implementation.
   Use for any .NET test writing or test review task.
 tools: Read, Write, Edit, Bash, Glob, Grep
-model: claude-sonnet-4-6
+model: sonnet
+color: yellow
 skills:
   - dotnet-master:dotnet-master
 ---
@@ -28,11 +29,23 @@ Always read the implementation files before writing tests.
 
 ## First Step — Always
 
+Work from the plan and the change set — don't inventory the whole repository.
+
 ```bash
-# Understand what you're testing first
-find . -name "*.cs" | grep -v Test | head -30
 cat PLAN.md 2>/dev/null || echo "No plan found"
+
+# Production code that changed, i.e. what needs tests.
+git diff --name-only --diff-filter=ACMR HEAD -- '*.cs' 2>/dev/null \
+  | grep -vE '(^|/)[^/]*Tests?/'
+
+# No git? Prune build output; exclude test projects by DIRECTORY, not substring.
+find . \( -name bin -o -name obj -o -name node_modules -o -name .git \) -prune -o \
+       -name '*.cs' -print 2>/dev/null | grep -vE '(^|/)[^/]*Tests?/'
 ```
+
+> `grep -v Test` matches anywhere in the path and silently drops legitimate production
+> files like `ProtestService.cs` or `LatestOrderQuery.cs`. Match the test **directory**
+> segment instead.
 
 ---
 
