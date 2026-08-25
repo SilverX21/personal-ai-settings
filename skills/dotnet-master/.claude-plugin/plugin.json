@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "dotnet-master",
+  "displayName": ".NET Master",
+  "version": "1.0.0",
+  "description": ".NET/C# standards skill bundled with its enforcement: five specialist subagents, deterministic hooks (guard, format, anti-pattern lint), and the scaffold-feature pipeline skill.",
+  "author": {
+    "name": "SilverX21"
+  }
+}
