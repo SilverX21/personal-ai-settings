@@ -80,16 +80,24 @@ skills:
 
 | Agent | Role | Access | Model | Output |
 |---|---|---|---|---|
-| `dotnet-architect` | Designs structure, picks architecture, defines contracts | Read + Write (plans/contracts only) | `sonnet` | `PLAN.md` |
-| `dotnet-implementer` | Turns the plan into production code | Full read/write/bash | `sonnet` | code |
-| `dotnet-tester` | Unit + integration tests (xUnit, Testcontainers, Shouldly) | Full read/write/bash | `sonnet` | tests |
-| `dotnet-reviewer` | Correctness/perf/standards review | **Read-only** | `sonnet` | `REVIEW.md` |
-| `dotnet-security` | Deep OWASP/secrets/authz review | **Read-only** | `sonnet` | `SECURITY-REPORT.md` |
+| `dotnet-architect` | Designs structure, picks architecture, defines contracts | Read + Write (plans/contracts only) | `claude-sonnet-5` | `PLAN.md` |
+| `dotnet-implementer` | Turns the plan into production code | Full read/write/bash | `claude-sonnet-5` | code |
+| `dotnet-tester` | Unit + integration tests (xUnit, Testcontainers, Shouldly) | Full read/write/bash | `claude-sonnet-5` | tests |
+| `dotnet-reviewer` | Correctness/perf/standards review | **Read-only** | `claude-sonnet-5` | `REVIEW.md` |
+| `dotnet-security` | Deep OWASP/secrets/authz review | **Read-only** | `claude-sonnet-5` | `SECURITY-REPORT.md` |
 
-> **Model field.** Claude Code accepts only `inherit`, `sonnet`, `opus`, or `haiku` here —
-> subagents run on Anthropic models, so third-party models cannot be assigned. `sonnet`
-> resolves to the current Sonnet. To spend more reasoning on the two hardest roles, set
-> `dotnet-architect` and `dotnet-security` to `opus`.
+> **Model field.** Accepts an alias (`sonnet`, `opus`, `haiku`, `fable`), a **full model
+> ID** (`claude-opus-5`, `claude-sonnet-5` — same values as the `--model` flag), or
+> `inherit`. Full IDs are used here so the choice is explicit and doesn't drift when an
+> alias is redefined.
+>
+> **Approved models for this repo:** Claude Sonnet 5, Grok 4.6, GPT-5.6 Terra, GPT-5.6
+> Luna. **Opus 5 and GPT-5.6 Sol are opt-in — use them only when explicitly asked.**
+>
+> Claude Code subagents run on Anthropic models only, so Grok and the GPT variants cannot
+> be assigned here. That leaves `claude-sonnet-5` as the one approved-and-available model,
+> which is why all five agents share it. Do not "upgrade" the judgment-heavy agents
+> (architect, security) to Opus without asking first.
 
 **Scoping rule for every agent:** work from the change set (`git diff --name-only`), not
 the repository. Never truncate a file list with `head` — a review that silently covers 50
@@ -109,7 +117,7 @@ and run the scripts in `scripts/` (paths use `${CLAUDE_PLUGIN_ROOT}`):
 |---|---|---|
 | `scripts/guard.sh` | `PreToolUse` · `Bash\|Read\|Edit\|Write` | Denies recursive force-deletes of root-ish paths, force-push to `main`/`master`, and destructive SQL **being executed** (not merely grepped). Asks before an EF migration against a remote/production DB. Denies reading secret-bearing files, while allowing `.env.example` and friends. |
 | `scripts/format.sh` | `PostToolUse` · `Edit\|Write` | Formats the edited `.cs` file, scoped to its **owning project** rather than the whole solution, under a 60s timeout. Auto-prefers CSharpier when installed; skips entirely if the project isn't restored yet, rather than triggering a restore inside a hook. |
-| `scripts/lint-antipatterns.sh` | `PostToolUse` · `Edit\|Write` | Flags banned patterns and blocks so they get fixed. Matches against a copy with comments, raw/verbatim/regular string literals stripped; exempts event-handler `async void`; flags `ConfigureAwait(false)` **only in app projects** — it is correct in a class library. |
+| `scripts/lint-antipatterns.sh` | `PostToolUse` · `Edit\|Write` | On `.csproj`/`Directory.Packages.props`: **blocks prerelease and wildcard package versions**. On `.cs`: flags banned patterns and blocks so they get fixed. Matches against a copy with comments, raw/verbatim/regular string literals stripped; exempts event-handler `async void`; flags `ConfigureAwait(false)` **only in app projects** — it is correct in a class library. |
 | `scripts/_common.sh` | *(sourced, not a hook)* | Shared scope helpers: `is_csharp_source`, `owning_project`, `is_app_project`, `strip_noise`, `rule_enabled` |
 
 ### Environment switches

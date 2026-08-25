@@ -7,7 +7,7 @@ description: >
   AutoFixture, Testcontainers, and Shouldly. Tests behavior not implementation.
   Use for any .NET test writing or test review task.
 tools: Read, Write, Edit, Bash, Glob, Grep
-model: sonnet
+model: claude-sonnet-5
 color: yellow
 skills:
   - dotnet-master:dotnet-master
@@ -79,7 +79,7 @@ The skill holds SOLID/KISS/DRY/YAGNI/Fail-Fast in full. For tests specifically:
 [Fact]
 public async Task GetPlayer_WithoutToken_Returns401()
 {
-    var response = await _client.GetAsync("/v1/players/some-id");
+    var response = await _client.GetAsync("/api/v1/players/some-id");
     response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
 }
 
@@ -89,7 +89,7 @@ public async Task DeletePlayer_AsRegularUser_Returns403()
 {
     _client.DefaultRequestHeaders.Authorization =
         new AuthenticationHeaderValue("Bearer", _regularUserToken);
-    var response = await _client.DeleteAsync("/v1/players/some-id");
+    var response = await _client.DeleteAsync("/api/v1/players/some-id");
     response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
 }
 
@@ -98,7 +98,7 @@ public async Task DeletePlayer_AsRegularUser_Returns403()
 public async Task CreatePlayer_WithExtraFields_DoesNotBindIsAdmin()
 {
     var payload = new { Name = "Silver", Email = "silver@test.com", IsAdmin = true };
-    var response = await _client.PostAsJsonAsync("/v1/players", payload);
+    var response = await _client.PostAsJsonAsync("/api/v1/players", payload);
     response.StatusCode.ShouldBe(HttpStatusCode.Created);
     var player = await response.Content.ReadFromJsonAsync<PlayerDto>();
     // IsAdmin must not appear in response — verify via DB state if needed
@@ -108,7 +108,7 @@ public async Task CreatePlayer_WithExtraFields_DoesNotBindIsAdmin()
 [Fact]
 public async Task CreatePlayer_WithEmptyName_Returns400()
 {
-    var response = await _client.PostAsJsonAsync("/v1/players",
+    var response = await _client.PostAsJsonAsync("/api/v1/players",
         new CreatePlayerRequest("", "silver@test.com"));
     response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
 }
@@ -118,8 +118,8 @@ public async Task CreatePlayer_WithEmptyName_Returns400()
 public async Task Endpoint_WhenCalledTooManyTimes_Returns429()
 {
     for (var i = 0; i < 100; i++)
-        await _client.GetAsync("/v1/players");
-    var response = await _client.GetAsync("/v1/players");
+        await _client.GetAsync("/api/v1/players");
+    var response = await _client.GetAsync("/api/v1/players");
     response.StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
 }
 ```
@@ -168,7 +168,7 @@ public class PlayerServiceTests
         var result = await _sut.GetPlayerAsync(playerId, CancellationToken.None);
 
         // Assert
-        result.IsSuccess.ShouldBeTrue();
+        result.IsError.ShouldBeFalse();
         result.Value.ShouldNotBeNull();
         result.Value.Name.ShouldBe("Silver");
     }
@@ -185,8 +185,8 @@ public class PlayerServiceTests
         var result = await _sut.GetPlayerAsync(playerId, CancellationToken.None);
 
         // Assert
-        result.IsSuccess.ShouldBeFalse();
-        result.Error.ShouldNotBeNullOrEmpty();
+        result.IsError.ShouldBeTrue();
+        result.FirstError.Code.ShouldBe(PlayerErrors.NotFound.Code);
     }
 }
 ```
@@ -216,7 +216,7 @@ public class PlayerServiceTests
         var result = await sut.CreatePlayerAsync(request, CancellationToken.None);
 
         // Assert
-        result.IsSuccess.ShouldBeTrue();
+        result.IsError.ShouldBeFalse();
     }
 }
 ```
@@ -254,7 +254,7 @@ public class PlayerEndpointsTests(PostgreSqlContainer postgres) : IClassFixture<
         // seed data...
 
         // Act
-        var response = await _client.GetAsync($"/v1/players/{playerId}");
+        var response = await _client.GetAsync($"/api/v1/players/{playerId}");
 
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -266,7 +266,7 @@ public class PlayerEndpointsTests(PostgreSqlContainer postgres) : IClassFixture<
     [Fact]
     public async Task GetPlayer_WhenNotFound_Returns404()
     {
-        var response = await _client.GetAsync($"/v1/players/{Guid.NewGuid()}");
+        var response = await _client.GetAsync($"/api/v1/players/{Guid.NewGuid()}");
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 }

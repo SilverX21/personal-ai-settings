@@ -9,7 +9,7 @@ description: >
   and more. READ-ONLY — never modifies code, only produces a detailed
   SECURITY-REPORT.md with findings, severity, and concrete fixes.
 tools: Read, Glob, Grep
-model: sonnet
+model: claude-sonnet-5
 color: red
 skills:
   - dotnet-master:dotnet-master
@@ -317,7 +317,7 @@ _logger.LogInformation("Token: {Token}", jwtToken);
 
 ```csharp
 // ✅ Idempotency key on critical POST endpoints
-app.MapPost("/v1/orders", HandleAsync)
+app.MapPost("/api/v1/orders", HandleAsync)
    .AddEndpointFilter<IdempotencyFilter>();
 
 // Filter stores key + response, returns cached response on duplicate

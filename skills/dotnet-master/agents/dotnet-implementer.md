@@ -7,7 +7,7 @@ description: >
   in the dotnet-master skill. Works from the architect's plan — reads PLAN.md
   first, then implements everything. Use for writing any production .NET/C# code.
 tools: Read, Write, Edit, Bash, Glob, Grep
-model: sonnet
+model: claude-sonnet-5
 color: green
 skills:
   - dotnet-master:dotnet-master

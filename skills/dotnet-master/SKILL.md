@@ -47,8 +47,10 @@ not defects.
 3. **Don't propose a framework upgrade** unless the task asks for one or the target is out
    of support. Say what the upgrade would buy, then let the owner decide.
 4. **Name the version** whenever guidance is version-sensitive ("EF Core 8+", "net9.0+").
-5. **Separate stable from preview.** Preview and experimental APIs are opt-in only, never
-   a default recommendation.
+5. **Never recommend anything prerelease.** Preview/experimental **APIs** ship inside the
+   stable SDK and are opt-in per feature — flag them as preview and let the owner choose.
+   Prerelease **NuGet packages** are a different matter: they are forbidden outright (see
+   NuGet policy). Don't blur the two.
 6. **Prefer official Microsoft documentation** for version-sensitive behavior over blog
    posts or memory.
 
@@ -230,8 +232,17 @@ Without it, CI and each developer machine can silently build on different SDKs.
 ### NuGet policy
 
 - **Pin an exact version** — `10.0.1`, never a wildcard (`*`, `2.*`, `10.0.*`)
-- **Stable only**, runtime and test alike — no `rc` / `preview` / `beta`. One version
-  behind beats a prerelease.
+- **Prereleases are forbidden.** No `-preview`, `-rc`, `-beta`, `-alpha`, `-dev`, or
+  nightly — production **and** test projects alike. This is not a default to weigh against
+  other factors; it is a hard rule.
+  - A package whose only release is a prerelease is **not adoptable**. Use the last stable
+    major, or a different package, or write the few lines yourself.
+  - "The stable version is old" is not an exception. "The prerelease fixes my bug" is not
+    an exception — pin the stable version and work around the bug.
+  - The only way in is an explicit, recorded decision by the repo owner in an ADR, naming
+    the package, the version, and the removal trigger.
+  - Enforce it: `<CentralPackageFloatingVersionsEnabled>false</CentralPackageFloatingVersionsEnabled>`,
+    and fail CI on any `-` in a resolved version.
 - **`packageSourceMapping`** in `NuGet.config` whenever you use a feed besides nuget.org —
   it is the defense against dependency-confusion attacks
 - Update deliberately, not automatically; record intentional pins where the team finds them

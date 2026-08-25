@@ -8,7 +8,7 @@ description: >
   can work immediately. Use when starting any .NET feature or needing architecture
   decisions reviewed.
 tools: Read, Write, Glob, Grep
-model: sonnet
+model: claude-sonnet-5
 color: blue
 skills:
   - dotnet-master:dotnet-master
