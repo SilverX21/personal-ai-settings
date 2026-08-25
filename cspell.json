@@ -30,6 +30,7 @@
     "Bogus",
     "bursty",
     "catastrophizing",
+    "configureawait",
     "CSharpier",
     "csproj",
     "Dapper",
@@ -39,6 +40,7 @@
     "frontmatter",
     "fsproj",
     "graphify",
+    "Grok",
     "Grokking",
     "HSTS",
     "ints",
@@ -71,6 +73,7 @@
     "Testcontainers",
     "unparameterized",
     "vbproj",
+    "VersionOverride",
     "Wolverine",
     "WolverineFx",
     "Zustand"

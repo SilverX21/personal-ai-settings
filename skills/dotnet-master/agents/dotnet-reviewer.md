@@ -8,7 +8,7 @@ description: >
   only reports findings with specific file and line references. Use for any code
   review, PR review, or quality gate task.
 tools: Read, Glob, Grep
-model: sonnet
+model: claude-sonnet-5
 color: orange
 skills:
   - dotnet-master:dotnet-master

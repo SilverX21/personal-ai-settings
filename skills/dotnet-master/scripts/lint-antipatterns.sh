@@ -15,6 +15,27 @@ INPUT="$(cat)"
 FILE="$(hook_file_path "$INPUT")"
 
 [ -n "$FILE" ] || exit 0
+
+# --- Project files: prerelease NuGet versions are forbidden outright ----------
+# Checked before the C# gate because these are .csproj / Directory.Packages.props,
+# not .cs. Still strictly .NET artifacts — no other language is inspected.
+case "$FILE" in
+  *.csproj|*.fsproj|*.vbproj|*Directory.Packages.props|*Directory.Build.props)
+    [ -f "$FILE" ] || exit 0
+    pre="$(grep -oE '(Version|VersionOverride)="[^"]*-[A-Za-z][^"]*"' "$FILE" 2>/dev/null \
+           | sed -E 's/.*="([^"]*)"/\1/' | sort -u)"
+    wild="$(grep -oE '(Version|VersionOverride)="[^"]*\*[^"]*"' "$FILE" 2>/dev/null \
+           | sed -E 's/.*="([^"]*)"/\1/' | sort -u)"
+    [ -z "$pre" ] && [ -z "$wild" ] && exit 0
+    msg="dotnet-master NuGet policy violated in $FILE:"$'\n'
+    [ -n "$pre" ]  && msg+="- Prerelease versions are FORBIDDEN: $(printf '%s' "$pre" | tr '\n' ' ')"$'\n'
+    [ -n "$wild" ] && msg+="- Wildcard versions are forbidden: $(printf '%s' "$wild" | tr '\n' ' ')"$'\n'
+    msg+=$'\n'"Pin the last stable release. If no stable release exists, the package is not adoptable."
+    jq -n --arg r "$msg" '{decision: "block", reason: $r}'
+    exit 0
+    ;;
+esac
+
 is_csharp_source "$FILE" || exit 0
 
 # Match against a comment- and string-stripped copy so sample code in a comment,
