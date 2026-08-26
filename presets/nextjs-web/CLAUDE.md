@@ -8,14 +8,15 @@ Website content and user-facing UI: **European Portuguese (pt-PT)**, never pt-BR
 
 ## Always load
 
-| File                                      | Load when                          |
-| ----------------------------------------- | ---------------------------------- |
-| `.claude/rules/communication-style.md`    | Every response                     |
-| `.claude/rules/engineering-principles.md` | Start of any coding task           |
-| `.claude/rules/workflow.md`               | Start of any coding task           |
-| `.claude/rules/code-review.md`            | Running or reviewing a code review |
-| `.claude/rules/collaboration.md`          | Handoff, scope decisions           |
-| `.claude/rules/graphify.md`               | Only if `graphify-out/` exists     |
+| File                                      | Load when                            |
+| ----------------------------------------- | ------------------------------------ |
+| `.claude/rules/communication-style.md`    | Every response                       |
+| `.claude/rules/engineering-principles.md` | Start of any coding task             |
+| `.claude/rules/workflow.md`               | Start of any coding task             |
+| `.claude/rules/code-review.md`            | Running or reviewing a code review   |
+| `.claude/rules/collaboration.md`          | Handoff, scope decisions             |
+| `.claude/rules/model-policy.md`           | Writing or configuring agents/skills |
+| `.claude/rules/graphify.md`               | Only if `graphify-out/` exists       |
 
 Load the rule _before_ the work, not after.
 

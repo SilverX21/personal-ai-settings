@@ -12,6 +12,7 @@ editing a file here changes the live setup, and git sees every change.
 
 ```
 rules/          tool-agnostic kernel — communication, principles, workflow, review, handoff
+claude/         Claude Code adapter extras shared across presets (model policy)
 skills/         skills I wrote or own outright (dotnet-master, neon-postgres)
 agents/         subagents I wrote (DocsExplorer)
 config/         reference copies of settings.json / settings.local.json
@@ -58,8 +59,8 @@ fill in the `<PLACEHOLDERS>` it prints.
 | `dotnet-react` | .NET 10 API + React 19 / Vite monorepo    |
 | `nextjs-web`   | Next.js App Router + Tailwind/shadcn      |
 
-Presets stay DRY by symlinking into `rules/` and `skills/`. Edit the rule once, every
-preset follows.
+Presets stay DRY by symlinking into `rules/`, `claude/` and `skills/`. Edit the
+file once, every preset follows.
 
 ---
 

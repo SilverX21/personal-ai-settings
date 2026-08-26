@@ -16,6 +16,7 @@ User-facing copy: **European Portuguese (pt-PT)**, never pt-BR.
 | `.claude/skills/dotnet-master/SKILL.md`   | Any .NET / C# / API / EF Core work      |
 | `.claude/rules/code-review.md`            | Running or reviewing a code review      |
 | `.claude/rules/collaboration.md`          | Handoff, scope decisions                |
+| `.claude/rules/model-policy.md`           | Writing or configuring agents/skills    |
 | `docs/backlog/SUMMARY.md`                 | Planning, picking work, updating status |
 
 Load the rule _before_ the work. Never read a whole epic file — grep the story ID.

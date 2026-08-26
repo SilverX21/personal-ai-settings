@@ -4,14 +4,16 @@ Tool-agnostic kernel. These apply to every project and every tool. Anything
 stack-specific belongs in a skill (`../skills/`). Anything tool-specific
 (slash commands, MCPs, named reviewers) belongs in the tool adapter, not here.
 
-| File | Holds | Load when |
-|---|---|---|
-| [communication-style.md](./communication-style.md) | How to write chat, commits, PRs, docs | Every response |
-| [engineering-principles.md](./engineering-principles.md) | SOLID/SoC/KISS/YAGNI/DRY, the ladder before writing code, root-cause fixes, configurability | Start of any coding task |
-| [workflow.md](./workflow.md) | Session lifecycle: plan (code + tests + docs), affected-suite tests, docs in the same change | Start of any coding task |
-| [code-review.md](./code-review.md) | Review process, findings table, severity scale | Running or reviewing a code review |
-| [collaboration.md](./collaboration.md) | Handoff format, scope boundaries, commit conventions | Handoff, scope decisions |
-| [graphify.md](./graphify.md) | Knowledge-graph navigation — **gated on `graphify-out/` existing** | Opt-in per project |
+| File                                                     | Holds                                                                                        | Load when                          |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------- |
+| [communication-style.md](./communication-style.md)       | How to write chat, commits, PRs, docs                                                        | Every response                     |
+| [engineering-principles.md](./engineering-principles.md) | SOLID/SoC/KISS/YAGNI/DRY, the ladder before writing code, root-cause fixes, configurability  | Start of any coding task           |
+| [workflow.md](./workflow.md)                             | Session lifecycle: plan (code + tests + docs), affected-suite tests, docs in the same change | Start of any coding task           |
+| [code-review.md](./code-review.md)                       | Review process, findings table, severity scale                                               | Running or reviewing a code review |
+| [collaboration.md](./collaboration.md)                   | Handoff format, scope boundaries, commit conventions                                         | Handoff, scope decisions           |
+| [graphify.md](./graphify.md)                             | Knowledge-graph navigation — **gated on `graphify-out/` existing**                           | Opt-in per project                 |
+
+Claude-only extras (model policy, slash commands) live in [`../claude/`](../claude/), not here.
 
 **Rule for the rules:** one concern per file, small enough to link from anywhere
 without dragging the rest along. If a file grows past that, split it.

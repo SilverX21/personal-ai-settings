@@ -23,7 +23,8 @@ When an implementation is complete, **stop and report**. Nuno reviews and commit
 
 - Improvements **inside** the task's files: just do them (Boy Scout, scoped)
 - Improvements **outside** the task's scope: **propose, don't do.** No surprise diffs.
-- Unclear scope or acceptance criteria, *and* the answer would change the code → `/grill-me`
+- Unclear scope or acceptance criteria, *and* the answer would change the code →
+  **ask**. Never invent.
 - Unknowns about the product → log them, never invent. Add to the project's
   pending-questions file with a new ID.
 
@@ -35,21 +36,3 @@ When an implementation is complete, **stop and report**. Nuno reviews and commit
 - **ADRs** for architecture decisions
 - **README** covers how to run, test, deploy
 - Small PRs; review with a security + performance checklist
-
-## Model policy
-
-Approved for agents and skills, no need to ask:
-
-- **Claude Sonnet 5** (`claude-sonnet-5`)
-- **Grok 4.6**
-- **GPT-5.6 Terra**
-- **GPT-5.6 Luna**
-
-**Opt-in only — use exclusively when explicitly asked:** Opus 5, GPT-5.6 Sol.
-Never "upgrade" an agent to one of these because a task looks hard.
-
-Platform limit: Claude Code subagents accept only Anthropic models in their `model:`
-frontmatter — an alias (`sonnet`, `opus`, `haiku`, `fable`), a full ID
-(`claude-sonnet-5`), or `inherit`. Grok and the GPT variants cannot be assigned there, so
-Claude Code agents default to `claude-sonnet-5`. Use full IDs, not aliases, so the choice
-doesn't shift when an alias is redefined.

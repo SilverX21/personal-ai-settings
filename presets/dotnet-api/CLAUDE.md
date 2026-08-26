@@ -15,6 +15,7 @@ Code, comments, commits, docs and chat: **US English**.
 | `.claude/skills/dotnet-master/SKILL.md`   | **Any** .NET / C# / API / EF Core work |
 | `.claude/rules/code-review.md`            | Running or reviewing a code review     |
 | `.claude/rules/collaboration.md`          | Handoff, scope decisions               |
+| `.claude/rules/model-policy.md`           | Writing or configuring agents/skills   |
 
 Load the rule _before_ the work. `dotnet-master` is the single source of truth for
 .NET standards — never restate them in this file.

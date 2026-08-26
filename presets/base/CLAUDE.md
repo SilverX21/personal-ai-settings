@@ -14,6 +14,7 @@ User-facing copy: **European Portuguese (pt-PT)**.
 | `.claude/rules/workflow.md`               | Start of any coding task           |
 | `.claude/rules/code-review.md`            | Running or reviewing a code review |
 | `.claude/rules/collaboration.md`          | Handoff, scope decisions           |
+| `.claude/rules/model-policy.md`           | Writing or configuring agents/skills |
 
 Load the rule _before_ the work, not after. Don't rely on memory alone.
 
