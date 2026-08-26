@@ -11,7 +11,7 @@ Approved for agents and skills, no need to ask:
 - **GPT-5.6 Terra**
 - **GPT-5.6 Luna**
 
-**Opt-in only — use exclusively when explicitly asked:** Opus 5, GPT-5.6 Sol.
+**Opt-in only — use exclusively when explicitly asked:** Opus 5, Fable 5, GPT-5.6 Sol.
 Never "upgrade" an agent to one of these because a task looks hard.
 
 Platform limit: Claude Code subagents accept only Anthropic models in their
