@@ -15,13 +15,15 @@ Check `docs/reviews/` for open `NNN-review.md` files.
 
 ## Running a review
 
-1. Fetch best practices for every package in the diff (Context7 MCP, or official docs)
+1. Fetch current docs for every package in the diff (official docs, or a docs
+   MCP if the tool has one)
 2. Score each finding **0–10** — lower is worse
 3. Look for: security holes · correctness bugs · accessibility violations ·
    anti-patterns · dead code · performance issues
 
-Every review ends with a security + best-practices pass:
-backend → `dotnet-reviewer` / `dotnet-security`; frontend → React best-practices review.
+Every review ends with a **security + best-practices pass**. Use the project's
+stack reviewers when they exist; otherwise do the pass yourself. Don't call
+the work done without it. Named reviewers live in the tool adapter, not here.
 
 ---
 

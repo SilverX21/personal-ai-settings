@@ -7,14 +7,15 @@ User-facing copy: **European Portuguese (pt-PT)**.
 
 ## Always load
 
-| File | Load when |
-|---|---|
-| `.claude/rules/communication-style.md` | Every response |
-| `.claude/rules/engineering-principles.md` | Start of any coding task |
-| `.claude/rules/code-review.md` | Running or reviewing a code review |
-| `.claude/rules/collaboration.md` | Handoff, scope decisions |
+| File                                      | Load when                          |
+| ----------------------------------------- | ---------------------------------- |
+| `.claude/rules/communication-style.md`    | Every response                     |
+| `.claude/rules/engineering-principles.md` | Start of any coding task           |
+| `.claude/rules/workflow.md`               | Start of any coding task           |
+| `.claude/rules/code-review.md`            | Running or reviewing a code review |
+| `.claude/rules/collaboration.md`          | Handoff, scope decisions           |
 
-Load the rule *before* the work, not after. Don't rely on memory alone.
+Load the rule _before_ the work, not after. Don't rely on memory alone.
 
 ## Non-negotiables
 
@@ -22,7 +23,7 @@ Load the rule *before* the work, not after. Don't rely on memory alone.
   Ambiguous requirement → `/grill-me`, never invent.
 - **Never commit.** Implementation done → stop and hand off per `collaboration.md`.
   Nuno reviews and commits.
-- **Tests** for the affected slice. A change isn't done with failing or missing tests.
+- **Tests** per `workflow.md`. A change isn't done with failing or missing tests.
 - **No hardcoded business values** — thresholds, percentages, fees, toggles go in
   config. Report what you made configurable and where.
 - **New packages need approval.** Stack packages are free to use.
@@ -30,13 +31,16 @@ Load the rule *before* the work, not after. Don't rely on memory alone.
 ## Workflow
 
 1. Unclear requirements → `/grill-me` before writing anything
-2. Complex or multi-step → plan first, confirm, then implement.
-   Small and obvious → announce what you'll do, then do it
+2. Follow `workflow.md` — plan (code + tests + docs), then implement
 3. `/ponytail` — the laziest solution that actually works
 4. Write the code
-5. Review per `code-review.md`
-6. Update the one doc this change made wrong
-7. Hand off, don't commit
+5. Review per `code-review.md` (security pass included)
+6. Hand off, don't commit
+
+## Skills
+
+- `context7` MCP — first choice for library docs; web search is the fallback
+- `/caveman` — chat replies and internal notes only, never docs or user-facing copy
 
 ## Do not
 

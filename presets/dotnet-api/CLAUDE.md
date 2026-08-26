@@ -7,22 +7,23 @@ Code, comments, commits, docs and chat: **US English**.
 
 ## Always load
 
-| File | Load when |
-|---|---|
-| `.claude/rules/communication-style.md` | Every response |
-| `.claude/rules/engineering-principles.md` | Start of any coding task |
-| `.claude/skills/dotnet-master/SKILL.md` | **Any** .NET / C# / API / EF Core work |
-| `.claude/rules/code-review.md` | Running or reviewing a code review |
-| `.claude/rules/collaboration.md` | Handoff, scope decisions |
+| File                                      | Load when                              |
+| ----------------------------------------- | -------------------------------------- |
+| `.claude/rules/communication-style.md`    | Every response                         |
+| `.claude/rules/engineering-principles.md` | Start of any coding task               |
+| `.claude/rules/workflow.md`               | Start of any coding task               |
+| `.claude/skills/dotnet-master/SKILL.md`   | **Any** .NET / C# / API / EF Core work |
+| `.claude/rules/code-review.md`            | Running or reviewing a code review     |
+| `.claude/rules/collaboration.md`          | Handoff, scope decisions               |
 
-Load the rule *before* the work. `dotnet-master` is the single source of truth for
+Load the rule _before_ the work. `dotnet-master` is the single source of truth for
 .NET standards — never restate them in this file.
 
 ## Non-negotiables
 
 - **Honesty:** never assume. Ambiguous requirement → `/grill-me`, never invent.
 - **Never commit.** Done → stop and hand off per `collaboration.md`.
-- **Tests:** unit + integration. Not done with failing or missing tests.
+- **Tests:** unit + integration, per `workflow.md`. Not done with failing or missing tests.
 - **No hardcoded business values** → DB config table or `appsettings.json`.
 - **Money logic is backend-only.** Never trust a client for money math.
 - **New NuGet packages need approval.** Pin latest stable, never prerelease, never wildcards.
@@ -30,13 +31,13 @@ Load the rule *before* the work. `dotnet-master` is the single source of truth f
 ## Workflow
 
 1. Unclear requirements → `/grill-me`
-2. Complex feature → `/dotnet-master` → `dotnet-architect` subagent to plan, confirm with Nuno
+2. Follow `workflow.md`. Complex feature → `/dotnet-master` → `dotnet-architect`
+   to plan, confirm with Nuno
 3. `/ponytail` — laziest solution that actually works
 4. Write the code
 5. `dotnet-reviewer` + `dotnet-tester`; anything touching auth, tokens, payments,
    user data, uploads or public endpoints → `dotnet-security` **before** handoff
-6. Update the one doc this change made wrong
-7. Hand off, don't commit
+6. Hand off, don't commit
 
 ## Skills
 

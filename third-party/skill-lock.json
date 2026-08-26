@@ -57,6 +57,16 @@
       "installedAt": "2026-06-28T22:12:53.644Z",
       "updatedAt": "2026-07-02T20:23:36.025Z"
     },
+    "grilling": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/mattpocock/skills.git",
+      "skillPath": "skills/productivity/grilling/SKILL.md",
+      "skillFolderHash": "8320e7b87f7b208f50ce165b1dd43d1e93c8e801",
+      "pluginName": "mattpocock-skills",
+      "installedAt": "2026-08-26T08:20:00.000Z",
+      "updatedAt": "2026-08-26T08:20:00.000Z"
+    },
     "shadcn": {
       "source": "shadcn/ui",
       "sourceType": "github",

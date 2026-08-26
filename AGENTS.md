@@ -1,8 +1,10 @@
 # AGENTS.md
 
-Nuno's working rules for any AI coding agent. Read by Cursor, Codex, Amp, Zed, Copilot,
-opencode, Gemini CLI and others. Claude Code reads the richer originals in `rules/`
-and `skills/` — this file is the portable condensation, kept in sync by hand.
+Kernel rules — true for every tool. Cursor, Codex, Copilot, Amp, Zed and others
+read this file. Tool-specific adapters (slash commands, MCPs, named reviewers)
+live elsewhere. Claude Code also reads the richer originals in `rules/`.
+
+Portable condensation, kept in sync by hand.
 
 ---
 
@@ -26,8 +28,8 @@ and `skills/` — this file is the portable condensation, kept in sync by hand.
 
 ## Engineering
 
-- **SOLID · KISS · YAGNI · DRY · Fail fast** — always. Some duplication beats the
-  wrong abstraction.
+- **SOLID · Separation of Concerns · KISS · YAGNI · DRY · Fail fast** — always.
+  Some duplication beats the wrong abstraction.
 - **Boy Scout Rule, scoped** — improve the files you touch; propose (don't do)
   anything outside the task's scope. No surprise diffs.
 - Before writing: does it need to exist? does the codebase already have it? does the
@@ -39,6 +41,16 @@ and `skills/` — this file is the portable condensation, kept in sync by hand.
 - Never simplify away: input validation at trust boundaries, error handling that
   prevents data loss, security, accessibility basics, anything explicitly requested.
 - Comments explain **why**, never **what**. Only when code can't say it itself.
+
+## Workflow
+
+- Every plan covers **code, tests, documentation**. Unknowns get resolved in
+  planning, not mid-implementation.
+- Unclear goal → ask. Never invent.
+- Tests for the affected slice. Don't default to a full run — ask if you can't
+  tell which suites.
+- Docs update in the same change. Record decisions and why, not just what changed.
+- Security review and code review before done. Don't silently fix outside scope.
 
 ## Handoff
 
@@ -67,5 +79,6 @@ Full versions live in this repo — copy the relevant one into the project:
 | .NET / C# | `skills/dotnet-master/SKILL.md` |
 | Communication | `rules/communication-style.md` |
 | Engineering principles | `rules/engineering-principles.md` |
+| Workflow | `rules/workflow.md` |
 | Code review | `rules/code-review.md` |
 | Handoff & scope | `rules/collaboration.md` |

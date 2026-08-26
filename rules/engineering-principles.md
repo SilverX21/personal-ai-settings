@@ -8,6 +8,7 @@ standards live in the skills (`dotnet-master`, the Vercel React skills, `shadcn`
 ## Core
 
 - **SOLID** — single responsibility, open/closed, Liskov, interface segregation, dependency inversion
+- **Separation of Concerns** — each unit owns one job. A named architecture is one way to get it, not the goal.
 - **KISS** — simplest solution that works. Avoid over-engineering.
 - **YAGNI** — don't build what isn't needed yet
 - **DRY** — with judgment. Some duplication beats the wrong abstraction.
@@ -84,6 +85,5 @@ non-obvious intent, trade-offs, or constraints the code can't convey. Comments e
 ## Token discipline
 
 - Load only the files you need
+- Read only docs for the area you're touching. Skip generic docs and unrelated files.
 - Never read whole epic/spec files — grep the ID, read that section
-- `/caveman` for chat replies and internal notes **only** — never for documentation,
-  code comments, commit text, or user-facing copy

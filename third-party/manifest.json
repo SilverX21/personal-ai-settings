@@ -31,6 +31,13 @@
       "pinnedFolderHash": "8320e7b87f7b208f50ce165b1dd43d1e93c8e801"
     },
     {
+      "name": "grilling",
+      "repo": "mattpocock/skills",
+      "url": "https://github.com/mattpocock/skills.git",
+      "skillPath": "skills/productivity/grilling/SKILL.md",
+      "pinnedFolderHash": "8320e7b87f7b208f50ce165b1dd43d1e93c8e801"
+    },
+    {
       "name": "impeccable",
       "repo": "pbakaus/impeccable",
       "url": "https://github.com/pbakaus/impeccable.git",
