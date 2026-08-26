@@ -26,17 +26,25 @@ src="$REPO/presets/$preset"
 [ -d "$target" ] || { echo "no such directory: $target" >&2; exit 1; }
 
 # Refuse to silently clobber; the caller decides what to do about it.
-for f in .claude CLAUDE.md AGENTS.md; do
+# .github/ is shared with Actions — refuse only the Copilot file, not the dir.
+for f in .claude CLAUDE.md AGENTS.md .cursor; do
   if [ -e "$target/$f" ]; then
     echo "$target/$f already exists — move it aside first" >&2
     exit 1
   fi
 done
+if [ -e "$target/.github/copilot-instructions.md" ]; then
+  echo "$target/.github/copilot-instructions.md already exists — move it aside first" >&2
+  exit 1
+fi
 
 # -L dereferences the symlinks that keep this repo DRY, so the copy stands alone.
 cp -RL "$src/.claude" "$target/.claude"
 cp -L "$src/CLAUDE.md" "$target/CLAUDE.md"
 cp -L "$src/AGENTS.md" "$target/AGENTS.md"
+cp -RL "$src/.cursor" "$target/.cursor"
+mkdir -p "$target/.github"
+cp -L "$src/.github/copilot-instructions.md" "$target/.github/copilot-instructions.md"
 
 echo "copied '$preset' into $target"
 echo

@@ -1,0 +1,12 @@
+---
+description: Cursor adapter. Kernel is AGENTS.md — do not restate it here.
+alwaysApply: true
+---
+
+# Cursor adapter
+
+Kernel: `AGENTS.md`. Follow it. Do not copy those rules into this directory.
+
+Cursor-only extras belong in `.cursor/rules/*.mdc`. One concern per file.
+
+No extras yet.

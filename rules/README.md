@@ -13,7 +13,8 @@ stack-specific belongs in a skill (`../skills/`). Anything tool-specific
 | [collaboration.md](./collaboration.md)                   | Handoff format, scope boundaries, commit conventions                                         | Handoff, scope decisions           |
 | [graphify.md](./graphify.md)                             | Knowledge-graph navigation — **gated on `graphify-out/` existing**                           | Opt-in per project                 |
 
-Claude-only extras (model policy, slash commands) live in [`../claude/`](../claude/), not here.
+Tool extras live in the adapter, not here: [`../claude/`](../claude/),
+[`../cursor/`](../cursor/), [`../copilot/`](../copilot/).
 
 **Rule for the rules:** one concern per file, small enough to link from anywhere
 without dragging the rest along. If a file grows past that, split it.

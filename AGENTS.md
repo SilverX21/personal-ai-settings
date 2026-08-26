@@ -1,8 +1,9 @@
 # AGENTS.md
 
 Kernel rules — true for every tool. Cursor, Codex, Copilot, Amp, Zed and others
-read this file. Tool-specific adapters (slash commands, MCPs, named reviewers)
-live elsewhere. Claude Code also reads the richer originals in `rules/`.
+read this file. Tool extras live in native adapters, not here: Cursor
+`.cursor/rules/*.mdc`, Copilot `.github/copilot-instructions.md`, Codex this
+file only. Claude Code also reads the richer originals in `rules/`.
 
 Portable condensation, kept in sync by hand.
 
