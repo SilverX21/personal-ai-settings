@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "aws-terraform-master",
   "displayName": "AWS Terraform Master",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "AWS cloud architecture, Terraform engineering standards, and live AWS debugging, bundled with their enforcement: six specialist subagents, deterministic hooks (apply/destroy and AWS CLI guard, fmt, anti-pattern lint) scoped to Terraform artifacts only, and architecture references for networking, multi-account, service selection, cost, operations, and runtime debugging.",
   "keywords": [
     "terraform",

@@ -83,6 +83,32 @@ policies, unpinned module sources, `provider` blocks inside modules, `ignore_cha
 
 Comments are stripped before matching, so prose about an anti-pattern does not trigger it.
 
+## Tests
+
+```bash
+./scripts/test-hooks.sh
+```
+
+66 cases over `guard.sh`, `lint-antipatterns.sh` and `format.sh`. Exits non-zero on
+failure, so it works as a pre-commit or CI gate. **Run it after touching any script.**
+
+It is not decoration — it caught two real bugs on first run: `rg "terraform destroy"
+README.md` was treated as an actual destroy, and `grep -r aws ./docs` as an AWS CLI call,
+because the patterns did not require the command to be in invoked-binary position. Both
+are now permanent regression cases, alongside wrapper cases (`TF_LOG=debug terraform
+apply`, `cd infra && ...`, `sudo aws ...`) proving the anchoring did not open a hole.
+
+The `lint-antipatterns.sh` rules are **line-anchored**, so fixtures must be
+`terraform fmt`-style with one attribute per line — which is what the linter sees in
+practice, since `format.sh` runs `fmt` on every write.
+
+## Pipeline skill
+
+`/scaffold-stack` runs the whole build pipeline: architect → implementer → reviewer +
+security + cost in parallel. It stops for human review after the plan, because account
+structure and CIDR allocation cannot be changed later without a migration. It never
+applies.
+
 ## Configuration
 
 | Variable | Effect |
