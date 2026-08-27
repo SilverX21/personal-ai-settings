@@ -1,14 +1,18 @@
 ---
 name: aws-terraform-master
 description: >
-  AWS cloud architecture and Terraform engineering standards. Load for any Terraform or
-  AWS infrastructure task — writing or reviewing HCL, module design, state and backends,
-  provider versions, IAM and secrets, CI/CD for infrastructure, drift, cost, networking,
-  multi-account design, or choosing between AWS services. Triggers on Terraform, HCL,
-  OpenTofu, terraform plan/apply, AWS, VPC, IAM, EKS, ECS, Lambda, RDS, S3, CloudFront,
-  AWS Organizations, Well-Architected, and on infrastructure files (*.tf, *.tfvars,
-  *.tftest.hcl, *.tftpl, .terraform.lock.hcl, terragrunt.hcl). Not a general-purpose
-  DevOps skill — do not load it for CI/CD work that has no AWS or Terraform component.
+  AWS cloud architecture, Terraform engineering standards, and live AWS debugging. Load
+  for any Terraform or AWS infrastructure task — writing or reviewing HCL, module design,
+  state and backends, provider versions, IAM and secrets, CI/CD for infrastructure, drift,
+  cost, networking, multi-account design, or choosing between AWS services. Also load when
+  something deployed is broken: a stopped or failing ECS task, a Lambda erroring or timing
+  out, failing health checks, ALB 5xx, CloudWatch log investigation, connectivity failures,
+  AccessDenied, or an unexplained latency or cost change. Triggers on Terraform, HCL,
+  OpenTofu, terraform plan/apply, AWS, VPC, IAM, EKS, ECS, Fargate, Lambda, RDS, S3,
+  CloudFront, CloudWatch, CloudTrail, AWS Organizations, Well-Architected, and on
+  infrastructure files (*.tf, *.tfvars, *.tftest.hcl, *.tftpl, .terraform.lock.hcl,
+  terragrunt.hcl). Not a general-purpose DevOps skill — do not load it for CI/CD work that
+  has no AWS or Terraform component.
 ---
 
 # AWS Terraform Master
@@ -453,12 +457,14 @@ terraform {
   this. An implicit major upgrade reaching production is an entirely preventable outage.
 - **Upgrade minors in non-production first**, read the changelog, then promote.
 - **Multi-region on provider v6+ uses the `region` argument**, not aliased providers:
+
   ```hcl
   resource "aws_s3_bucket" "replica" {
     bucket = "acme-assets-replica"
     region = "us-east-1"
   }
   ```
+
   Aliased providers remain correct for **multi-account** (different `assume_role`) and for
   provider-level configuration that genuinely differs. Global services — IAM, CloudFront,
   Route 53, Organizations — have no `region`.
@@ -477,6 +483,7 @@ Order of preference:
    runtime.
 2. **Write-only arguments (Terraform 1.11+ / provider v6+)** for values a resource must
    receive at create/update time. `*_wo` arguments never enter plan or state.
+
    ```hcl
    ephemeral "aws_secretsmanager_secret_version" "db" {
      secret_id = aws_secretsmanager_secret.db.id
@@ -488,6 +495,7 @@ Order of preference:
      password_wo_version = var.db_password_version   # bump to trigger a rotation
    }
    ```
+
 3. **Ephemeral resources / `ephemeral` variables (1.10+)** for anything needed only during
    the run — short-lived tokens, generated passwords. Never persisted.
 4. **`sensitive = true`** as a last resort for values that must live in state anyway. It
@@ -644,6 +652,7 @@ The pipeline, in order:
 change is applying something nobody reviewed.
 
 Non-negotiables:
+
 - **Branch protection**: required reviews, required checks, no force-push.
 - **`-lock-timeout`** set, so concurrent runs queue rather than fail.
 - **Never `-auto-approve` outside a merged, protected-branch pipeline.**
@@ -700,11 +709,27 @@ Terraform then encodes — load the relevant reference:
 | Lambda vs Fargate vs EKS vs EC2; which database | `references/service-selection.md` |
 | Reducing spend; commitment strategy; cost review | `references/cost.md` |
 | Monitoring, alerting, SLOs, DR tiers, RTO/RPO | `references/operations.md` |
+| **Something deployed is broken — why?** | `references/debugging.md` |
 | What not to do | `references/antipatterns.md` |
 
 Read the reference before advising on that area. Architecture guidance is where confident
 wrong answers are most expensive — a bad CIDR plan cannot be fixed later without
 renumbering, and a bad account boundary cannot be fixed without a migration.
+
+### Investigating live infrastructure
+
+Debugging a running system is a different activity from building one, and it has its own
+rule: **read before you touch.**
+
+- **Never mutate to diagnose.** Restarting the service destroys the evidence and usually
+  "fixes" the symptom, guaranteeing a recurrence with the diagnostic trail gone.
+- **Anything you change outside Terraform becomes drift** that the next apply reverts.
+  When an incident forces an out-of-band change, record it and reconcile it into code the
+  same day.
+- **Capture time-limited evidence first.** Stopped ECS tasks are retained roughly an hour;
+  after that the stop reason is unrecoverable.
+- Read-only AWS CLI calls (`describe-*`, `get-*`, `list-*`, `logs tail`) are safe and
+  encouraged. `references/debugging.md` has the failure signatures and query patterns.
 
 ### The one rule that survives every architecture
 

@@ -70,6 +70,39 @@ This discards a lock another run may still hold. Confirm the other run is dead, 
       ask "This changes what the next apply will do:"$'\n'"$CMD"$'\n\n'"For imports, prefer an \`import\` block so the plan shows it. Proceed?"
     fi
 
+    # ---------------------------- AWS CLI ----------------------------------
+    # Investigation must stay free; mutation must not happen outside Terraform.
+    # Anything the CLI changes directly becomes drift the next apply reverts.
+    if printf '%s' "$CMD" | grep -Eq '(^[[:space:]]*|[|;&][[:space:]]*)aws[[:space:]]'; then
+
+      # Read-only verbs — allow silently. Listed explicitly rather than by
+      # exclusion, so an unrecognised verb falls through to `ask` and never
+      # runs unreviewed.
+      if printf '%s' "$CMD" | grep -Eq '(^[[:space:]]*|[|;&][[:space:]]*)aws[[:space:]]+[a-z0-9-]+[[:space:]]+(describe|get|list|lookup|search|scan|batch-get|head|test|simulate|filter|estimate|preview|validate|check|generate-credential-report|tail|start-query|stop-query|get-query-results|select|sample|summarize|export-|analyze|query)([a-z0-9-]*)?\b'; then
+        exit 0
+      fi
+
+      # `aws logs tail` and `aws s3 ls`/`cp` do not follow the verb-first shape.
+      if printf '%s' "$CMD" | grep -Eq '(^[[:space:]]*|[|;&][[:space:]]*)aws[[:space:]]+logs[[:space:]]+tail\b|(^[[:space:]]*|[|;&][[:space:]]*)aws[[:space:]]+s3[[:space:]]+ls\b|(^[[:space:]]*|[|;&][[:space:]]*)aws[[:space:]]+sts[[:space:]]+get-caller-identity\b|(^[[:space:]]*|[|;&][[:space:]]*)aws[[:space:]]+(configure[[:space:]]+list|--version)\b'; then
+        exit 0
+      fi
+
+      # Hard deny — irreversible destruction of live resources. The fix for a
+      # resource that should not exist is to remove it from the code and apply.
+      if printf '%s' "$CMD" | grep -Eq '(^[[:space:]]*|[|;&][[:space:]]*)aws[[:space:]]+[a-z0-9-]+[[:space:]]+(delete|terminate|remove|purge|destroy|deregister|revoke|disable|cancel|reset|restore)[a-z0-9-]*\b'; then
+        deny "Destructive AWS CLI call blocked by aws-terraform-master guard:
+$CMD
+
+Deleting a Terraform-managed resource by CLI desynchronises state and the change is invisible to review. Remove it from the configuration and apply instead.
+If this is genuinely out-of-band emergency work, run it yourself in the terminal."
+      fi
+
+      # Ask — everything else that touches AWS. Includes create/update/put/
+      # modify/start/stop/run/invoke/attach/scale, plus any verb not matched
+      # above, because an unknown verb is not assumed safe.
+      ask "This AWS CLI call may change live infrastructure:"$'\n'"$CMD"$'\n\n'"Changes made outside Terraform become drift that the next apply reverts. Proceed?"
+    fi
+
     exit 0
     ;;
 

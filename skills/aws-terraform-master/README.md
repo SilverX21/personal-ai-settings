@@ -27,6 +27,7 @@ Progressive disclosure — read the one relevant to the task rather than loading
 | `service-selection.md` | Compute, data, and messaging decision tables |
 | `cost.md` | Architecture savings before commitments; review checklist |
 | `operations.md` | Observability signals, alerting, DR tiers, RTO/RPO |
+| `debugging.md` | Live runtime investigation — ECS stop codes, exit codes, Logs Insights, connectivity, IAM denials |
 | `antipatterns.md` | The flag-in-review list |
 
 ### Agents
@@ -38,9 +39,14 @@ Progressive disclosure — read the one relevant to the task rather than loading
 | `tf-reviewer` | Correctness, structure, maintainability | **Read-only** |
 | `aws-security` | Least privilege, secrets, state, exposure. Writes `SECURITY-REPORT.md` | **Read-only** |
 | `aws-cost` | Cost drivers and architecture-level savings | **Read-only** |
+| `aws-investigator` | Debugs **live** AWS — reads running state, logs, CloudTrail | **Read-only against AWS** |
 
-Typical flow: `aws-architect` → `tf-implementer` → `tf-reviewer` + `aws-security` in
+Build flow: `aws-architect` → `tf-implementer` → `tf-reviewer` + `aws-security` in
 parallel → `aws-cost` before merge.
+
+Incident flow: `aws-investigator` alone. It reads live infrastructure and reports findings
+with evidence; it never applies a fix, because mutating destroys the evidence and creates
+drift.
 
 ## Enforcement
 
@@ -56,9 +62,15 @@ contains YAML, Python, Go and Dockerfiles — those are never inspected or refor
 | `destroy`, `apply` | **ask** |
 | `state rm/mv/push`, `taint`, `import` | **ask** — prefer `moved`/`import` blocks |
 | `plan`, `fmt`, `validate`, `init` | allow |
+| `aws describe-*`/`get-*`/`list-*`/`logs tail` | allow — investigation stays friction-free |
+| `aws delete-*`/`terminate-*`/`revoke-*` | **deny** — desyncs state; change the code instead |
+| any other `aws` call, incl. unrecognised verbs | **ask** — unknown is never assumed safe |
 
 It also blocks reads and writes of `*.tfstate`, `.terraform/`, and secret-bearing files.
 State holds every managed value in plaintext, so reading it is reading credentials.
+
+`aws` is matched only in invoked-binary position, so `grep -r aws ./docs` is not caught
+while `ls && aws ecs delete-service` is.
 
 **`format.sh`** (PostToolUse) — `terraform fmt` on the edited file. Falls back to `tofu`,
 and no-ops cleanly when neither binary is installed.
