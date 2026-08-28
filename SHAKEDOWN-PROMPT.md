@@ -15,19 +15,31 @@ settings repo. Nothing is written into either repo.
 ## SETUP (once)
 
 ```bash
-git clone <personal-ai-settings repo url> ~/personal-ai-settings
-cd ~/personal-ai-settings && ./install.sh --link-only
-test -d ~/.claude/skills/aws-terraform-master && echo OK
+git clone https://github.com/SilverX21/personal-ai-settings.git ~/personal-ai-settings
+export SKILL=~/personal-ai-settings/skills/aws-terraform-master
+test -d "$SKILL" && echo OK
 mkdir -p ~/tf-shakedown
 ```
 
-### Known: the hooks are DORMANT under this install, by design of the shakedown
+Deliberately no `install.sh`. Every script below resolves its own directory and runs
+straight from the clone — verified: the full suite passes, and the linter and guard
+both work, with `~/.claude` never involved. Running `install.sh --link-only` on a
+company machine would instead symlink all three of my skills plus an agent into
+`~/.claude`, replace any same-named skill already there, and overwrite
+`~/.agents/.skill-lock.json` — which changes skill resolution for that whole account,
+not just this exercise. It backs up what it replaces, but none of it is needed here.
 
-`install.sh` symlinks `skills/*/` into `~/.claude/skills/` and never touches
-`settings.json`. The skill's `hooks/hooks.json` is keyed on `${CLAUDE_PLUGIN_ROOT}`,
-which is only populated for an *enabled plugin*. So `guard.sh` and
-`lint-antipatterns.sh` will **not fire automatically** — no PostToolUse lint on edit,
-no PreToolUse guard on Bash.
+`SKILL` is exported so `sweep.sh` inherits it; re-set it in any new terminal, or the
+sweep aborts with a message rather than running against a nonexistent linter.
+
+### Known: the hooks are DORMANT here, by design of the shakedown
+
+Nothing is installed: the clone is not linked into `~/.claude` and the plugin is not
+enabled. Even under `install.sh`, which symlinks `skills/*/` and never touches
+`settings.json`, the hooks would still be dormant — `hooks/hooks.json` is keyed on
+`${CLAUDE_PLUGIN_ROOT}`, which is only populated for an *enabled plugin*. Either way
+`guard.sh` and `lint-antipatterns.sh` will **not fire automatically** — no PostToolUse
+lint on edit, no PreToolUse guard on Bash.
 
 This is deliberate here: we are testing the rules' *judgement*, and both scripts are
 invoked directly on stdin below. Do **not** try to enable the plugin on a company
@@ -50,7 +62,7 @@ jq '.enabledPlugins // {}' ~/.claude/settings.json
 ## TASK 0 — baseline the linter on its own fixtures
 
 ```bash
-~/.claude/skills/aws-terraform-master/scripts/test-hooks.sh 2>&1 \
+"$SKILL"/scripts/test-hooks.sh 2>&1 \
   | tee ~/tf-shakedown/00-baseline.txt
 ```
 
@@ -75,7 +87,7 @@ set -uo pipefail
 # The linter calls require_jq, which `exit 0`s SILENTLY when jq is absent. Without this
 # check every file reads as clean and a zero count is indistinguishable from a pass.
 command -v jq >/dev/null 2>&1 || { echo "jq missing: the linter fails open and silent, so every count below would be a lie. Install jq first." >&2; exit 1; }
-LINT=~/.claude/skills/aws-terraform-master/scripts/lint-antipatterns.sh
+LINT="${SKILL:?set SKILL to the cloned skill dir}"/scripts/lint-antipatterns.sh
 ROOT="$(pwd)"
 # Named after the repo being swept. A fixed filename plus the `: >` truncation below
 # means sweeping a second repo silently destroys the first one's findings.
@@ -215,7 +227,7 @@ prints a JSON decision:
 # vanish. Default in the shell instead, or the whole table comes back blank.
 probe() {
   d=$(jq -nc --arg c "$1" '{tool_name:"Bash",tool_input:{command:$c}}' \
-      | ~/.claude/skills/aws-terraform-master/scripts/guard.sh \
+      | "$SKILL"/scripts/guard.sh \
       | jq -r '.hookSpecificOutput.permissionDecision' 2>/dev/null)
   printf '%-6s %s\n' "${d:-allow}" "$1"
 }
