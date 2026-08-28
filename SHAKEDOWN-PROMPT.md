@@ -266,29 +266,39 @@ File-access probes: `{"tool_name":"Read","tool_input":{"file_path":"<path>"}}`. 
 whether guard's `SECRET_PATTERN` (`.key$`, `.pem$`, `.env*`, `secrets.auto.tfvars`)
 denies any file this repo legitimately needs read.
 
-### Known guard false positive — multi-line commands, confirmed on fixtures
+### Two guard defects found and already fixed — probe them as regressions
 
-`BINPRE` exists so a command that merely *mentions* a destructive one is not read as
-invoking it, and on a single line it works. But `grep -E` matches line by line, so
-`BINPRE`'s `^` anchors at the start of **every line of the command string**, not at the
-start of a shell command. Quoting and heredoc context are invisible to it. Measured:
+Both were found by probing the guard directly during preparation, and both are fixed in
+this clone. Re-probe them: the point now is that they *stay* fixed, and a `deny` where
+the table says `allow` is a regression, not a discovery.
 
-| Command string | Decision |
+**1. Multi-line commands (`BINPRE` vs heredocs).** `BINPRE` exists so a command that
+merely *mentions* a destructive one is not read as invoking it. On a single line it
+always worked, but `grep -E` matches line by line, so the `^` anchored at the start of
+every line of the command string rather than the start of a shell command — making a
+heredoc body indistinguishable from a real second command. It fired twice while editing
+this skill's own scripts. `strip_heredocs()` now drops heredoc bodies before matching.
+
+| Command string | Expected |
 |---|---|
 | `rg "<destructive>" README.md` — single line, quoted | allow |
-| `echo "<destructive>"` — single line, quoted | allow |
-| heredoc whose body line is `<destructive>` | **deny** |
-| `python3 - <<'PY'` with `<destructive>` inside a Python string | **deny** |
-| genuine second line `<destructive>` | deny (correct) |
+| heredoc whose body line is `<destructive>` | allow |
+| `python3 - <<'PY'` with `<destructive>` inside a Python string | allow |
+| `<<-` indented heredoc body | allow |
+| `<destructive>` after a *closed* heredoc | deny |
+| genuine second line `<destructive>` | deny |
 
-The error direction is over-blocking, so this is friction rather than a hole. The
-friction is real though: it blocks writing *about* these commands — documentation,
-tests, or any script that embeds an example. It fired twice while editing this skill's
-own `guard.sh` and `test-hooks.sh`, and both edits had to be made with a non-Bash tool.
+Still open, deliberately: a multi-line **quoted string** that is not a heredoc still
+misfires, and an unterminated heredoc swallows the rest of the string. Neither is
+exploitable — bash will not run an unterminated heredoc — but say if you disagree.
 
-Probe it with a multi-line string and report it under Guard. The fix is to strip
-heredoc bodies and quoted strings before matching, or to match only in real command
-position rather than at every line start — say which you would choose.
+**2. `aws s3` shorthand escaped the deny branch.** The deny list spelled its verbs out,
+so `s3 rm` and `s3 rb` fell through to `ask` while `s3api delete-object` and
+`delete-bucket` were denied — the same irreversible operation getting two decisions.
+Now denied. `s3 ls` must still be `allow`, and `cp` / `sync` / `mv` stay at `ask`.
+
+Report both under Guard as *found and fixed during the shakedown*, and note that the
+generic probe sweep is what surfaced them — neither was visible from reading the source.
 
 ## DELIVERABLE
 
