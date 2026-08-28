@@ -77,7 +77,9 @@ set -uo pipefail
 command -v jq >/dev/null 2>&1 || { echo "jq missing: the linter fails open and silent, so every count below would be a lie. Install jq first." >&2; exit 1; }
 LINT=~/.claude/skills/aws-terraform-master/scripts/lint-antipatterns.sh
 ROOT="$(pwd)"
-OUT=~/tf-shakedown/findings.tsv
+# Named after the repo being swept. A fixed filename plus the `: >` truncation below
+# means sweeping a second repo silently destroys the first one's findings.
+OUT=~/tf-shakedown/findings-$(basename "$ROOT").tsv
 : > "$OUT"
 
 # reason-substring -> rule name. Built from the add() strings in the script.
@@ -115,7 +117,7 @@ echo "--- files scanned ---"
 find . \( -name '*.tf' -o -name '*.tfvars' \) -not -path './.terraform/*' | wc -l
 ```
 
-`findings.tsv` is `rule<TAB>relative-path`. It stays local — you need real paths to
+`findings-<repo>.tsv` is `rule<TAB>relative-path`. It stays local — you need real paths to
 open each file and judge it.
 
 **For EVERY finding, open the file and judge it yourself: true positive, false
@@ -259,7 +261,7 @@ Write `~/tf-shakedown/SHAKEDOWN-REPORT.md` (outside both repos; nothing committe
 
 ## CONFIDENTIALITY
 
-`findings.tsv` and the raw sweep output are working material and **never travel** —
+`findings-<repo>.tsv` and the raw sweep output are working material and **never travel** —
 they hold real paths. Only `SHAKEDOWN-REPORT.md` travels, to a personal repo.
 
 The report must contain NO company code: no verbatim HCL, no ARNs, no account IDs,
