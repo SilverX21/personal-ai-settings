@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# pre-commit — spellcheck staged Markdown against cspell.json.
+#
+# Enabled by `core.hooksPath = .githooks`, which install.sh sets. Versioned with the
+# repo so a fresh clone gets the same gate; .git/hooks would not travel.
+#
+# Scope: staged Markdown only. Prose is what cspell.json is tuned for, and checking
+# the whole repo on every commit turns a gate into a wait.
+set -uo pipefail
+
+# Added/Copied/Modified only — a deleted file has nothing left to check.
+files=()
+while IFS= read -r -d '' f; do files+=("$f"); done \
+  < <(git diff --cached --name-only --diff-filter=ACM -z -- '*.md')
+[ ${#files[@]} -gt 0 ] || exit 0
+
+# Prefer a real install; fall back to npx, which resolves from its cache after the
+# first fetch. No package.json here by design, so npx is the normal path.
+if command -v cspell >/dev/null 2>&1; then
+  CSPELL=(cspell)
+elif command -v npx >/dev/null 2>&1; then
+  CSPELL=(npx --yes cspell)
+else
+  echo "pre-commit: no cspell and no npx — skipping spellcheck." >&2
+  exit 0
+fi
+
+# NOTE: cspell reads from disk, not the index. For a partially staged file this checks
+# the working-tree version, which can differ from what is being committed.
+"${CSPELL[@]}" --no-progress "${files[@]}" || {
+  cat >&2 <<'MSG'
+
+Commit blocked: cspell found unknown words above.
+  real typo        -> fix it
+  real term        -> add it to "words" in cspell.json
+  British spelling -> use US English (see rules/communication-style.md)
+MSG
+  exit 1
+}

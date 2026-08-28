@@ -4,6 +4,8 @@
 #
 #   ./install.sh              symlink my stuff + reinstall third-party skills
 #   ./install.sh --link-only  symlink only, skip the network
+#
+# Also points core.hooksPath at .githooks so the cspell pre-commit gate is live.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -41,6 +43,14 @@ done
 for agent in "$REPO"/agents/*.md; do
   link "$agent" "$CLAUDE/agents/$(basename "$agent")"
 done
+
+echo "==> Enabling repo git hooks"
+if [ -d "$REPO/.git" ]; then
+  git -C "$REPO" config core.hooksPath .githooks
+  info "ok       core.hooksPath -> .githooks"
+else
+  warn "not a git checkout, skipped core.hooksPath"
+fi
 
 echo "==> Restoring skill lock"
 mkdir -p "$AGENTS"

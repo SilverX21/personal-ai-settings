@@ -21,6 +21,7 @@ config/         reference copies of settings.json / settings.local.json
 third-party/    manifest of everything installed from upstream — not vendored
 presets/        drop-in bundles per stack (native files per tool)
 AGENTS.md       kernel condensation (Agents.md spec). Tool extras live in adapters.
+.githooks/      versioned git hooks (cspell gate on staged Markdown)
 install.sh      wire this repo into ~/.claude
 use.sh          drop a preset into a project
 ```
@@ -39,9 +40,14 @@ cd ~/Projects/personal-ai-settings
 ./install.sh
 ```
 
-Symlinks `skills/` and `agents/` into `~/.claude`, restores the skill lock, and
-git-clones the third-party skills from the manifest. Idempotent; backs up anything real
-it would replace. `settings.json` is left alone — see `config/README.md`.
+Symlinks `skills/` and `agents/` into `~/.claude`, restores the skill lock, points
+`core.hooksPath` at `.githooks`, and git-clones the third-party skills from the
+manifest. Idempotent; backs up anything real it would replace. `settings.json` is left
+alone — see `config/README.md`.
+
+The hook spellchecks staged Markdown with cspell and blocks the commit on an unknown
+word. It uses `npx` when cspell is not installed, and skips itself when neither is
+available.
 
 ## New project
 
