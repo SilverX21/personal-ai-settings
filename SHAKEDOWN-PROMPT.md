@@ -266,6 +266,30 @@ File-access probes: `{"tool_name":"Read","tool_input":{"file_path":"<path>"}}`. 
 whether guard's `SECRET_PATTERN` (`.key$`, `.pem$`, `.env*`, `secrets.auto.tfvars`)
 denies any file this repo legitimately needs read.
 
+### Known guard false positive — multi-line commands, confirmed on fixtures
+
+`BINPRE` exists so a command that merely *mentions* a destructive one is not read as
+invoking it, and on a single line it works. But `grep -E` matches line by line, so
+`BINPRE`'s `^` anchors at the start of **every line of the command string**, not at the
+start of a shell command. Quoting and heredoc context are invisible to it. Measured:
+
+| Command string | Decision |
+|---|---|
+| `rg "<destructive>" README.md` — single line, quoted | allow |
+| `echo "<destructive>"` — single line, quoted | allow |
+| heredoc whose body line is `<destructive>` | **deny** |
+| `python3 - <<'PY'` with `<destructive>` inside a Python string | **deny** |
+| genuine second line `<destructive>` | deny (correct) |
+
+The error direction is over-blocking, so this is friction rather than a hole. The
+friction is real though: it blocks writing *about* these commands — documentation,
+tests, or any script that embeds an example. It fired twice while editing this skill's
+own `guard.sh` and `test-hooks.sh`, and both edits had to be made with a non-Bash tool.
+
+Probe it with a multi-line string and report it under Guard. The fix is to strip
+heredoc bodies and quoted strings before matching, or to match only in real command
+position rather than at every line start — say which you would choose.
+
 ## DELIVERABLE
 
 Write `~/tf-shakedown/SHAKEDOWN-REPORT.md` (outside every repo; nothing committed).
