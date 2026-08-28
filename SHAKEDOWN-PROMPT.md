@@ -159,6 +159,23 @@ these are the predicted misfire modes. Confirm or refute each:
    fires — a false negative, not a clean pass.
 6. **Findings are file-level, not line-level.** Three wildcard IAM actions in one
    file report as one finding. Note wherever this understates real density.
+7. **Nearly every rule is anchored to the start of a line**, so HCL that puts an
+   argument on the same line as its block opener escapes the pattern entirely. Confirmed
+   on fixtures, and it breaks in *both* directions depending on what the anchored grep
+   is looking for:
+   - Anchored **positive** checks go silent — `dynamodb_lock`, `hardcoded_secret`,
+     `wildcard_iam`, `heredoc_policy`, `unpinned_module`, `module_provider` and
+     `provisioner` all found nothing in a one-line file and every finding in the same
+     content reformatted. False negatives.
+   - Anchored **negative** checks invert and fire on correct code — a one-line
+     `backend "s3"` holding `encrypt = true` and `use_lockfile = true`, and a one-line
+     log group holding `retention_in_days`, produced three findings accusing the file
+     of missing all three. False positives on Terraform that is already right.
+
+   `terraform fmt` puts every argument on its own line, so a fmt-clean repo is not
+   affected. That makes fmt status a **precondition for reading this repo's counts at
+   all**: run `terraform fmt -check -recursive` first, and if it is not clean, treat
+   both the zeros and the backend/retention findings as unreliable until it is.
 
 ### Never-fired rules — check for false negatives
 
