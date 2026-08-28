@@ -29,12 +29,12 @@ head_() { printf '\n\033[1m%s\033[0m\n' "$1"; }
 # --- guard.sh: Bash commands -------------------------------------------------
 # want = deny | ask | allow
 g() {
-  local want="$1" cmd="$2"
+  local want="$1" cmd="$2" label="${3:-$2}"   # label keeps multi-line cases one line
   local got
   got="$(jq -nc --arg c "$cmd" '{tool_name:"Bash",tool_input:{command:$c}}' \
          | "$GUARD" | jq -r '.hookSpecificOutput.permissionDecision // empty')"
   got="${got:-allow}"
-  [ "$got" = "$want" ] && ok "$cmd → $got" || bad "$cmd" "got=$got want=$want"
+  [ "$got" = "$want" ] && ok "$label → $got" || bad "$label" "got=$got want=$want"
 }
 
 # --- guard.sh: file access ---------------------------------------------------
@@ -89,6 +89,22 @@ g deny  'aws s3 rm s3://bucket/key'
 g deny  'aws s3 rm s3://bucket --recursive'
 g deny  'aws s3api delete-bucket --bucket b'                # the spelled-out twin
 g allow 'aws s3 ls s3://bucket'                             # rm/rb deny must not catch ls
+
+head_ "guard.sh — heredoc bodies are content, not commands"
+g allow $'cat <<\'EOF\'\naws s3 rb s3://bucket --force\nEOF' \
+        'heredoc body holding a destructive call'
+g allow $'python3 - <<\'PY\'\nt = "aws ecs delete-service --service x"\nPY' \
+        'python heredoc, destructive text inside a string'
+g allow $'cat <<-EOT\n\tterraform apply -auto-approve\n\tEOT' \
+        'indented <<- heredoc body'
+g allow $'cat <<\'A\'\nx\nA\ncat <<\'B\'\naws s3 rm s3://bucket --recursive\nB' \
+        'second of two heredocs'
+g deny  $'cat <<\'EOF\'\nharmless\nEOF\naws s3 rb s3://bucket --force' \
+        'real command after a closed heredoc'
+g deny  $'grep -q x && echo ok\naws ecs delete-service --service x' \
+        'real command on its own second line'
+g deny  $'echo one\nterraform destroy -auto-approve' \
+        'auto-approve on a second line'
 
 head_ "guard.sh — AWS CLI mutating, and unknown verbs"
 g ask   'aws ecs update-service --force-new-deployment'

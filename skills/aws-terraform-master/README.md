@@ -89,7 +89,7 @@ Comments are stripped before matching, so prose about an anti-pattern does not t
 ./scripts/test-hooks.sh
 ```
 
-72 cases over `guard.sh`, `lint-antipatterns.sh` and `format.sh`. Exits non-zero on
+79 cases over `guard.sh`, `lint-antipatterns.sh` and `format.sh`. Exits non-zero on
 failure, so it works as a pre-commit or CI gate. **Run it after touching any script.**
 
 It is not decoration — it caught two real bugs on first run: `rg "terraform destroy"

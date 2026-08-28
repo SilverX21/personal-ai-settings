@@ -38,58 +38,98 @@ TF='(terraform|tofu|terragrunt)'
 # `grep -r aws ./docs` are read as the commands they merely mention.
 BINPRE='(^|[|;&])[[:space:]]*([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]+[[:space:]]+|(sudo|env|time|nohup|nice|xargs)[[:space:]]+)*'
 
+# grep is line-oriented, so BINPRE's `^` anchors at the start of every LINE of the
+# command, not at the start of a shell command. That makes a heredoc body — the text
+# of a file being written — indistinguishable from a real second command, and blocks
+# writing documentation, tests, or any script that merely embeds an example.
+#
+# Drop heredoc bodies before matching. The opener line is kept, because it IS a real
+# command, and a genuine command on its own line still matches. Herestrings (`<<<`)
+# are left alone: they are a single line and carry no body.
+strip_heredocs() {
+  local line rest trimmed delim="" inhd=0 out=""
+  while IFS= read -r line || [ -n "$line" ]; do
+    if [ "$inhd" = 1 ]; then
+      trimmed="${line#"${line%%[![:space:]]*}"}"
+      trimmed="${trimmed%"${trimmed##*[![:space:]]}"}"
+      [ "$trimmed" = "$delim" ] && inhd=0
+      continue
+    fi
+    case "$line" in
+      *'<<'*)
+        rest="${line#*<<}"
+        case "$rest" in
+          '<'*) ;;                                   # herestring, not a heredoc
+          *)
+            rest="${rest#-}"
+            rest="${rest#"${rest%%[![:space:]]*}"}"  # drop leading blanks
+            rest="${rest%%[[:space:];|&)]*}"         # delimiter ends at a shell token
+            rest="${rest//\"/}"
+            rest="${rest//\'/}"
+            [ -n "$rest" ] && { delim="$rest"; inhd=1; }
+            ;;
+        esac
+        ;;
+    esac
+    out+="$line"$'\n'
+  done
+  printf '%s' "$out"
+}
+
 case "$TOOL" in
   Bash)
     CMD="$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty')"
     [ -n "$CMD" ] || exit 0
+    # Match against the command with heredoc bodies removed; report the original.
+    SCAN="$(printf '%s' "$CMD" | strip_heredocs)"
 
     # Hard deny — auto-approve bypasses the plan review that every control depends on.
     # A merged pipeline applies a saved plan file; it does not need this flag here.
-    if printf '%s' "$CMD" | grep -Eq "${BINPRE}$TF\b[^|;]*\b(apply|destroy)\b[^|;]*--?auto-approve"; then
+    if printf '%s' "$SCAN" | grep -Eq "${BINPRE}$TF\b[^|;]*\b(apply|destroy)\b[^|;]*--?auto-approve"; then
       deny "\`-auto-approve\` blocked by aws-terraform-master guard: $CMD
 Applying without a reviewed plan defeats the review gate. Run \`plan -out=tfplan\`, show it, then apply the saved plan file."
     fi
 
     # Hard deny — force-unlock discards another run's lock and can corrupt state.
-    if printf '%s' "$CMD" | grep -Eq "${BINPRE}$TF\b[^|;]*\bforce-unlock\b"; then
+    if printf '%s' "$SCAN" | grep -Eq "${BINPRE}$TF\b[^|;]*\bforce-unlock\b"; then
       deny "\`force-unlock\` blocked by aws-terraform-master guard: $CMD
 This discards a lock another run may still hold. Confirm the other run is dead, then a human should run it directly."
     fi
 
     # Ask — destroys live infrastructure.
-    if printf '%s' "$CMD" | grep -Eq "${BINPRE}$TF\b[^|;]*\bdestroy\b"; then
+    if printf '%s' "$SCAN" | grep -Eq "${BINPRE}$TF\b[^|;]*\bdestroy\b"; then
       ask "This DESTROYS live infrastructure:"$'\n'"$CMD"$'\n\n'"Proceed?"
     fi
 
     # Ask — mutates live infrastructure.
-    if printf '%s' "$CMD" | grep -Eq "${BINPRE}$TF\b[^|;]*\bapply\b"; then
+    if printf '%s' "$SCAN" | grep -Eq "${BINPRE}$TF\b[^|;]*\bapply\b"; then
       ask "This applies changes to live infrastructure:"$'\n'"$CMD"$'\n\n'"Proceed?"
     fi
 
     # Ask — mutates state directly. Invisible to review; prefer moved/import blocks.
-    if printf '%s' "$CMD" | grep -Eq "${BINPRE}$TF\b[^|;]*\bstate +(rm|mv|push|replace-provider)\b"; then
+    if printf '%s' "$SCAN" | grep -Eq "${BINPRE}$TF\b[^|;]*\bstate +(rm|mv|push|replace-provider)\b"; then
       ask "This edits Terraform state directly:"$'\n'"$CMD"$'\n\n'"Prefer a \`moved\` block — refactoring belongs in the diff. Proceed anyway?"
     fi
 
     # Ask — taint/untaint and CLI import both change what the next apply will do.
-    if printf '%s' "$CMD" | grep -Eq "${BINPRE}$TF\b[^|;]*\b(taint|untaint|import)\b"; then
+    if printf '%s' "$SCAN" | grep -Eq "${BINPRE}$TF\b[^|;]*\b(taint|untaint|import)\b"; then
       ask "This changes what the next apply will do:"$'\n'"$CMD"$'\n\n'"For imports, prefer an \`import\` block so the plan shows it. Proceed?"
     fi
 
     # ---------------------------- AWS CLI ----------------------------------
     # Investigation must stay free; mutation must not happen outside Terraform.
     # Anything the CLI changes directly becomes drift the next apply reverts.
-    if printf '%s' "$CMD" | grep -Eq "${BINPRE}aws[[:space:]]"; then
+    if printf '%s' "$SCAN" | grep -Eq "${BINPRE}aws[[:space:]]"; then
 
       # Read-only verbs — allow silently. Listed explicitly rather than by
       # exclusion, so an unrecognized verb falls through to `ask` and never
       # runs unreviewed.
-      if printf '%s' "$CMD" | grep -Eq "${BINPRE}aws[[:space:]]+[a-z0-9-]+[[:space:]]+(describe|get|list|lookup|search|scan|batch-get|head|test|simulate|filter|estimate|preview|validate|check|generate-credential-report|tail|start-query|stop-query|get-query-results|select|sample|summarize|export-|analyze|query)([a-z0-9-]*)?\b"; then
+      if printf '%s' "$SCAN" | grep -Eq "${BINPRE}aws[[:space:]]+[a-z0-9-]+[[:space:]]+(describe|get|list|lookup|search|scan|batch-get|head|test|simulate|filter|estimate|preview|validate|check|generate-credential-report|tail|start-query|stop-query|get-query-results|select|sample|summarize|export-|analyze|query)([a-z0-9-]*)?\b"; then
         exit 0
       fi
 
       # `aws logs tail` and `aws s3 ls`/`cp` do not follow the verb-first shape.
-      if printf '%s' "$CMD" | grep -Eq "${BINPRE}aws[[:space:]]+logs[[:space:]]+tail\b|${BINPRE}aws[[:space:]]+s3[[:space:]]+ls\b|${BINPRE}aws[[:space:]]+sts[[:space:]]+get-caller-identity\b|${BINPRE}aws[[:space:]]+(configure[[:space:]]+list|--version)\b"; then
+      if printf '%s' "$SCAN" | grep -Eq "${BINPRE}aws[[:space:]]+logs[[:space:]]+tail\b|${BINPRE}aws[[:space:]]+s3[[:space:]]+ls\b|${BINPRE}aws[[:space:]]+sts[[:space:]]+get-caller-identity\b|${BINPRE}aws[[:space:]]+(configure[[:space:]]+list|--version)\b"; then
         exit 0
       fi
 
@@ -99,7 +139,7 @@ This discards a lock another run may still hold. Confirm the other run is dead, 
       # miss the verb list above while doing exactly what the `s3api` calls named
       # there do. Kept as a separate alternative, like `s3 ls` in the read-only
       # branch, so the verb list stays readable.
-      if printf '%s' "$CMD" | grep -Eq "${BINPRE}aws[[:space:]]+[a-z0-9-]+[[:space:]]+(delete|terminate|remove|purge|destroy|deregister|revoke|disable|cancel|reset|restore)[a-z0-9-]*\b|${BINPRE}aws[[:space:]]+s3[[:space:]]+(rm|rb)\b"; then
+      if printf '%s' "$SCAN" | grep -Eq "${BINPRE}aws[[:space:]]+[a-z0-9-]+[[:space:]]+(delete|terminate|remove|purge|destroy|deregister|revoke|disable|cancel|reset|restore)[a-z0-9-]*\b|${BINPRE}aws[[:space:]]+s3[[:space:]]+(rm|rb)\b"; then
         deny "Destructive AWS CLI call blocked by aws-terraform-master guard:
 $CMD
 
