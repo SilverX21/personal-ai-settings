@@ -84,6 +84,11 @@ g deny  'aws ec2 terminate-instances --instance-ids i-1'
 g deny  'aws rds delete-db-instance --db-instance-identifier x'
 g deny  'aws ec2 revoke-security-group-ingress --group-id sg-1'
 g deny  'ls && aws ecs delete-service --service x'          # chained still caught
+g deny  'aws s3 rb s3://bucket --force'                     # abbreviated verb, same as delete-bucket
+g deny  'aws s3 rm s3://bucket/key'
+g deny  'aws s3 rm s3://bucket --recursive'
+g deny  'aws s3api delete-bucket --bucket b'                # the spelled-out twin
+g allow 'aws s3 ls s3://bucket'                             # rm/rb deny must not catch ls
 
 head_ "guard.sh — AWS CLI mutating, and unknown verbs"
 g ask   'aws ecs update-service --force-new-deployment'

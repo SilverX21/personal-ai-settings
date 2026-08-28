@@ -95,7 +95,11 @@ This discards a lock another run may still hold. Confirm the other run is dead, 
 
       # Hard deny — irreversible destruction of live resources. The fix for a
       # resource that should not exist is to remove it from the code and apply.
-      if printf '%s' "$CMD" | grep -Eq "${BINPRE}aws[[:space:]]+[a-z0-9-]+[[:space:]]+(delete|terminate|remove|purge|destroy|deregister|revoke|disable|cancel|reset|restore)[a-z0-9-]*\b"; then
+      # The `s3` shorthand spells its destructive verbs as abbreviations, so they
+      # miss the verb list above while doing exactly what the `s3api` calls named
+      # there do. Kept as a separate alternative, like `s3 ls` in the read-only
+      # branch, so the verb list stays readable.
+      if printf '%s' "$CMD" | grep -Eq "${BINPRE}aws[[:space:]]+[a-z0-9-]+[[:space:]]+(delete|terminate|remove|purge|destroy|deregister|revoke|disable|cancel|reset|restore)[a-z0-9-]*\b|${BINPRE}aws[[:space:]]+s3[[:space:]]+(rm|rb)\b"; then
         deny "Destructive AWS CLI call blocked by aws-terraform-master guard:
 $CMD
 
