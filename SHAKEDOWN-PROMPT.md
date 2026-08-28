@@ -251,30 +251,69 @@ denies any file this repo legitimately needs read.
 
 ## DELIVERABLE
 
-Write `~/tf-shakedown/SHAKEDOWN-REPORT.md` (outside both repos; nothing committed):
+Write `~/tf-shakedown/SHAKEDOWN-REPORT.md` (outside every repo; nothing committed).
 
-- **Repo shape** — file count, module count, rough age, community vs in-house mix,
-  whether it uses plain Terraform or Terragrunt, and how state is split.
-- **Task 0** — baseline suite pass/fail.
-- **Per rule** — fired count, true positives, false positives, verdict
-  (keep / tune / disable-by-default). `backend_lock` counted as its two findings.
-- **Every false positive** — which rule, why it misfired, what the pattern should
-  have been instead. **This is the highest-value section.** Say whether the fix is
-  line-scoping, cross-file awareness, or a narrower regex.
-- **False negatives** — rules that never fired where the concept was present.
-- **References** — which loaded, which never did, whether the ones that didn't
-  should have.
-- **Finding #0 — hook wiring.** Confirm hooks are dormant under `--link-only`, and
-  say whether the skill's own README is misleading about it (it describes `hooks/` as
-  "deterministic enforcement" without stating that plugin enablement is required).
-- **Guard** — probe results only. Any decision that would obstruct this team's real
-  workflow, and any `allow` that should have been an `ask`.
+Three targets were swept. Refer to them as **Repo A / B / C** throughout. The mapping
+from label to real repository lives only in your local notes and never enters the
+report — see CONFIDENTIALITY.
+
+### Part 1 — per repo, brief
+
+One block each for A, B, C. This is the evidence base, not the analysis:
+
+- **Shape** — file count, module count, rough age, community vs in-house module mix,
+  plain Terraform or Terragrunt, and how state is split.
+- **Fired counts** — rule → count, from that repo's `findings-<repo>.tsv`.
+- **Judgement totals** — of those findings, how many true positive, false positive, and
+  technically-true-but-not-worth-flagging.
+
+### Part 2 — the skill, across all three
+
+The actual deliverable. Every claim here says which repos it holds in.
+
+- **Task 0** — baseline suite pass/fail. Machine-level, recorded once.
+- **Per rule** — one row per rule, with the per-repo split visible:
+
+  | Rule | A | B | C | TP | FP | Verdict |
+
+  A rule that fires four times in one repo and never in the other two is a different
+  signal from one that fires everywhere, and a single total hides that. `backend_lock`
+  counted as its two findings. Verdict: keep / tune / disable-by-default.
+- **Every false positive** — rule, which repo, why it misfired, and what the pattern
+  should have been instead. **This is the highest-value section.** Say whether the fix
+  is line-scoping, cross-file awareness, or a narrower regex. Group by rule rather than
+  by repo: the same misfire seen in three repos is one defect with three witnesses, not
+  three findings.
+- **False negatives** — rules that never fired where the concept was present, and in
+  which repos. Silent in all three because no repo has the pattern is a pass; silent
+  because the detector's assumption does not match the layout is a defect, and the more
+  serious one.
+- **References** — which loaded, which never did, whether the ones that didn't should
+  have. Say which repo each question was about; a question about a Terragrunt repo and
+  one about plain Terraform should not pull the same references.
+- **Finding #0 — hook wiring.** Confirm the hooks are dormant, and say whether the
+  skill's own README is misleading about it (it describes `hooks/` as "deterministic
+  enforcement" without stating that plugin enablement is required).
+- **Guard** — probe results only, split per repo wherever their real command lists
+  differ. Any decision that would obstruct that team's workflow, and any `allow` that
+  should have been an `ask`.
 - **Anything the skill got flatly wrong about real-world Terraform.**
+
+### Part 3 — verdict
+
+One paragraph. Is the skill fit to point at a real Terraform repo as it stands, what
+has to change before it is, and in what order would you fix it.
 
 ## CONFIDENTIALITY
 
-`findings-<repo>.tsv` and the raw sweep output are working material and **never travel** —
-they hold real paths. Only `SHAKEDOWN-REPORT.md` travels, to a personal repo.
+`findings-<repo>.tsv`, the raw sweep output, and the A/B/C label mapping are working
+material and **never travel** — they hold real paths and real repository names. Keep
+them in `~/tf-shakedown/`. Only `SHAKEDOWN-REPORT.md` travels, to a personal repo.
+
+The repository names are themselves company information, which is why the report uses
+A / B / C. Distinguishing detail identifies a repo as surely as its slug does — naming
+the product line, the customer, or the workload it serves is naming the repo. Describe
+a target by shape only: its size, its tooling, how its state is split.
 
 The report must contain NO company code: no verbatim HCL, no ARNs, no account IDs,
 no CIDR blocks, no bucket / domain / service / module names. Paraphrase findings ("a
