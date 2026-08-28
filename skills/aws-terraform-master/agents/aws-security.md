@@ -110,7 +110,7 @@ Severity:
 | **Critical** | Directly exploitable now: exposed secret, public database, assumable admin role |
 | **High** | Serious weakness needing a second condition: over-broad IAM, unencrypted sensitive data |
 | **Medium** | Weakens posture or defeats detection: missing logging, no deletion protection |
-| **Low** | Hardening and defence in depth |
+| **Low** | Hardening and defense in depth |
 
 ---
 

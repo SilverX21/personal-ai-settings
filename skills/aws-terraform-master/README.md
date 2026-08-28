@@ -64,7 +64,7 @@ contains YAML, Python, Go and Dockerfiles — those are never inspected or refor
 | `plan`, `fmt`, `validate`, `init` | allow |
 | `aws describe-*`/`get-*`/`list-*`/`logs tail` | allow — investigation stays friction-free |
 | `aws delete-*`/`terminate-*`/`revoke-*` | **deny** — desyncs state; change the code instead |
-| any other `aws` call, incl. unrecognised verbs | **ask** — unknown is never assumed safe |
+| any other `aws` call, incl. unrecognized verbs | **ask** — unknown is never assumed safe |
 
 It also blocks reads and writes of `*.tfstate`, `.terraform/`, and secret-bearing files.
 State holds every managed value in plaintext, so reading it is reading credentials.
@@ -128,7 +128,7 @@ not required by the hooks.
 
 ## Notes
 
-- **OpenTofu** is not the target but the guard and formatter both recognise `tofu`. The HCL
+- **OpenTofu** is not the target but the guard and formatter both recognize `tofu`. The HCL
   standards apply unchanged; HCP Terraform and Sentinel guidance does not.
 - The standards assume Terraform 1.14 / provider v6 and flag version floors explicitly.
   Older repositories are normal — `SKILL.md` opens with a version-awareness table so

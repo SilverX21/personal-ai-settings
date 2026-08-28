@@ -82,7 +82,7 @@ This discards a lock another run may still hold. Confirm the other run is dead, 
     if printf '%s' "$CMD" | grep -Eq "${BINPRE}aws[[:space:]]"; then
 
       # Read-only verbs — allow silently. Listed explicitly rather than by
-      # exclusion, so an unrecognised verb falls through to `ask` and never
+      # exclusion, so an unrecognized verb falls through to `ask` and never
       # runs unreviewed.
       if printf '%s' "$CMD" | grep -Eq "${BINPRE}aws[[:space:]]+[a-z0-9-]+[[:space:]]+(describe|get|list|lookup|search|scan|batch-get|head|test|simulate|filter|estimate|preview|validate|check|generate-credential-report|tail|start-query|stop-query|get-query-results|select|sample|summarize|export-|analyze|query)([a-z0-9-]*)?\b"; then
         exit 0
