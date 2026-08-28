@@ -33,6 +33,13 @@ This is deliberate here: we are testing the rules' *judgement*, and both scripts
 invoked directly on stdin below. Do **not** try to enable the plugin on a company
 machine to "fix" this.
 
+The stake in that last sentence is not hypothetical. There is a **third** hook,
+`format.sh`, on the same PostToolUse matcher as the linter, and it runs `terraform fmt`
+**in place**. Enabling the plugin would make every Edit or Write in the infra repo
+rewrite the file it touched. Dormancy is what keeps this run read-only, so `format.sh`
+is never invoked below — only `guard.sh` and `lint-antipatterns.sh`, both of which
+only read and print.
+
 Confirm it rather than assuming it, and record it as finding #0:
 
 ```bash
@@ -65,6 +72,9 @@ Save as `~/tf-shakedown/sweep.sh` and run it from the infra repo root:
 #!/usr/bin/env bash
 # Read-only sweep. Executes no terraform, no aws, writes nothing into the repo.
 set -uo pipefail
+# The linter calls require_jq, which `exit 0`s SILENTLY when jq is absent. Without this
+# check every file reads as clean and a zero count is indistinguishable from a pass.
+command -v jq >/dev/null 2>&1 || { echo "jq missing: the linter fails open and silent, so every count below would be a lie. Install jq first." >&2; exit 1; }
 LINT=~/.claude/skills/aws-terraform-master/scripts/lint-antipatterns.sh
 ROOT="$(pwd)"
 OUT=~/tf-shakedown/findings.tsv
@@ -148,10 +158,31 @@ detector's pattern, and say which explanation holds:
 | `module_provider` | `provider "` inside reusable-module dirs | no such dirs / path assumption wrong |
 | `dynamodb_lock` + `backend_lock` | `backend "s3"` | backend not in this repo (Terragrunt? separate bootstrap?) |
 | `provisioner` | `provisioner` | genuinely clean / missed |
+| `hardcoded_secret` | `_password[[:space:]]*=`, `_secret`, `_token`, `_key` | **CONFIRMED FN, see below** |
+| `unpinned_module` (zero *despite* remote modules) | `\?ref=` | **CONFIRMED FN, see below** |
 
 A rule that never fires because the repo does not have the pattern is a pass. A rule
 that never fires because the detector's assumption does not match this repo's layout
 is a defect, and a more serious one than a false positive.
+
+### Two false negatives already confirmed against fixtures — do not re-derive, quantify
+
+Both were reproduced on synthetic `.tf` files before this run. Treat a zero count from
+either rule as meaningless and go straight to the concept grep, then report **how many
+real instances the detector missed** in this repo.
+
+1. **`hardcoded_secret` misses every prefixed field name.** The rule anchors on
+   `^[[:space:]]*(password|secret|token|api_key|access_key|secret_key|private_key)`, so
+   the keyword must start the line. `master_password = "..."` and `db_password = "..."`
+   produce **zero findings** — and `master_password` is the most common hardcoded-secret
+   shape in AWS Terraform. Fix is a shifted regex (allow an optional `[a-z_]*` prefix
+   before the keyword), not dropping the anchor.
+2. **`unpinned_module`: one pinned module launders every unpinned one in the same file.**
+   The escape clause is a file-wide `! grep -q '?ref=[0-9a-fv]'`. A branch named
+   `feature-x` starts with `f`, which is in that class, so it reads as a commit hash *and*
+   silences a sibling `?ref=main` in the same file — both together produce zero findings.
+   Any ref starting `a`–`f`, `v`, or a digit passes as pinned. Fix is line-scoping plus a
+   real pattern, e.g. `\?ref=([0-9a-f]{7,40}|v?[0-9]+\.[0-9]+)`.
 
 ## TASK 2 — reference loading
 
@@ -177,11 +208,14 @@ Feed command strings to guard.sh on stdin. This executes nothing — the guard o
 prints a JSON decision:
 
 ```bash
+# The guard prints NOTHING on allow. `jq -r '.x // "allow"'` does not help: with empty
+# stdin jq has no input to apply the default to, so it emits nothing and the allow rows
+# vanish. Default in the shell instead, or the whole table comes back blank.
 probe() {
-  jq -nc --arg c "$1" '{tool_name:"Bash",tool_input:{command:$c}}' \
-    | ~/.claude/skills/aws-terraform-master/scripts/guard.sh \
-    | jq -r '.hookSpecificOutput.permissionDecision // "allow"' \
-    | xargs -I{} printf '%-6s %s\n' {} "$1"
+  d=$(jq -nc --arg c "$1" '{tool_name:"Bash",tool_input:{command:$c}}' \
+      | ~/.claude/skills/aws-terraform-master/scripts/guard.sh \
+      | jq -r '.hookSpecificOutput.permissionDecision' 2>/dev/null)
+  printf '%-6s %s\n' "${d:-allow}" "$1"
 }
 # real commands this repo's workflow would actually use — adapt to its docs/Makefile/CI
 probe 'terraform plan -out=tfplan'
