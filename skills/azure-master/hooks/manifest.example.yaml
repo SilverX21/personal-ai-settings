@@ -1,0 +1,20 @@
+# Documentation-only example. Hook schemas vary by client/harness.
+hooks:
+  pre_task:
+    type: prompt
+    file: hooks/pre-task.md
+    applies_to:
+      - build-change
+      - troubleshoot
+      - design-review
+  post_task:
+    type: prompt
+    file: hooks/post-task.md
+    applies_to:
+      - build-change
+      - troubleshoot
+      - design-review
+  reference_freshness:
+    type: command
+    command: python3 hooks/reference-freshness.py
+    purpose: Flag local Azure references that should be revalidated against official docs.

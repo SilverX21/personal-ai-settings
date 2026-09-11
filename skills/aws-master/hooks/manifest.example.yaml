@@ -1,0 +1,10 @@
+# Example only. Map these lifecycle intents to the hook mechanism supported by your host.
+name: aws-master-hooks
+version: 1
+hooks:
+  pre_task:
+    instructions: hooks/pre-task.md
+  post_task:
+    instructions: hooks/post-task.md
+  reference_freshness:
+    command: python3 hooks/reference-freshness.py

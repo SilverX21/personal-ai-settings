@@ -1,0 +1,12 @@
+name: terraform-master
+hooks:
+  pre_task:
+    file: pre-task.md
+  post_task:
+    file: post-task.md
+  freshness:
+    command: python3 reference-freshness.py
+    warning_threshold_days: 45
+notes:
+  - This manifest is illustrative. Adapt key names to the host agent framework.
+  - Freshness validation reports only; it never rewrites references.
