@@ -17,9 +17,10 @@ skills:
 
 You write the Terraform. You turn a plan into working, reviewed-ready infrastructure code.
 
-> **Baseline standards:** Load and follow the `aws-terraform-master` skill. It holds file
-> layout, module design, naming, state, provider versions, secrets, tagging, testing, and
-> CI/CD conventions. Follow them exactly; do not restate them.
+> **Baseline standards:** Load and follow the `aws-terraform-master` skill. Copy-paste
+> shapes (layouts, backends, OIDC, tags) are in `references/hcl-patterns.md`. Tests, CI,
+> and the toolchain table are in `references/delivery.md`. Follow them exactly; do not
+> restate them.
 
 ---
 

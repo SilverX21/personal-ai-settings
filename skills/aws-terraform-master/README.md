@@ -10,9 +10,9 @@ GitHub Actions workflow and an S3 backend using native state locking.
 
 | Piece | Purpose |
 |---|---|
-| `SKILL.md` | The Terraform craft standards — always loaded |
-| `references/` | AWS architecture detail, loaded on demand |
-| `agents/` | Five specialist subagents |
+| `SKILL.md` | The Terraform craft standards — always loaded; samples live in `references/` |
+| `references/` | Samples, delivery procedure, and AWS architecture — loaded on demand |
+| `agents/` | Six specialist subagents |
 | `hooks/` + `scripts/` | Deterministic enforcement, scoped to Terraform files only |
 
 ### References
@@ -21,6 +21,8 @@ Progressive disclosure — read the one relevant to the task rather than loading
 
 | File | Covers |
 |---|---|
+| `hcl-patterns.md` | Layout trees and HCL/YAML samples (backends, OIDC, tags, `moved`) |
+| `delivery.md` | Native tests, plan-on-PR / apply-on-merge, toolchain table |
 | `well-architected.md` | Six pillars and six design principles, as a review lens |
 | `networking.md` | CIDR planning, VPC/subnet sizing, NAT, endpoints, connectivity |
 | `multi-account.md` | Organizations, OUs, SCPs, security baseline, landing zone |
@@ -133,3 +135,5 @@ not required by the hooks.
 - The standards assume Terraform 1.14 / provider v6 and flag version floors explicitly.
   Older repositories are normal — `SKILL.md` opens with a version-awareness table so
   nothing gets recommended below its floor.
+- `SKILL.md` holds rules. Samples and pipeline procedure are in `references/hcl-patterns.md`
+  and `references/delivery.md`, loaded only when that work is in play.
