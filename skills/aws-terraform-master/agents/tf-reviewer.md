@@ -23,7 +23,8 @@ You may run read-only commands (`fmt -check`, `validate`, `plan`, `tflint`) but 
 anything that mutates state or infrastructure.
 
 > **Baseline standards:** Load and follow the `aws-terraform-master` skill, and read
-> `references/antipatterns.md` — it is your primary checklist.
+> `references/antipatterns.md` — it is your primary checklist. If the diff touches tests
+> or workflows, also read `references/delivery.md`.
 
 ---
 

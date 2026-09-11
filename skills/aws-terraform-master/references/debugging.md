@@ -20,6 +20,9 @@ fixing the second thing you thought of before confirming the first.
 **Never mutate to diagnose.** Restarting the service destroys the evidence and often
 "fixes" it temporarily, guaranteeing a repeat at a worse time. Capture state first.
 
+**Capture time-limited evidence first.** Stopped ECS tasks are retained roughly an hour;
+after that the stop reason is gone.
+
 **Out-of-band fixes create drift.** If you change something in the console or by CLI to
 resolve an incident, it is now different from Terraform and the next apply will revert it.
 Record what you changed and reconcile it into code the same day.

@@ -1,23 +1,20 @@
 ---
 name: aws-terraform-master
 description: >
-  AWS cloud architecture, Terraform engineering standards, and live AWS debugging. Load
-  for any Terraform or AWS infrastructure task — writing or reviewing HCL, module design,
-  state and backends, provider versions, IAM and secrets, CI/CD for infrastructure, drift,
-  cost, networking, multi-account design, or choosing between AWS services. Also load when
-  something deployed is broken: a stopped or failing ECS task, a Lambda erroring or timing
-  out, failing health checks, ALB 5xx, CloudWatch log investigation, connectivity failures,
-  AccessDenied, or an unexplained latency or cost change. Triggers on Terraform, HCL,
-  OpenTofu, terraform plan/apply, AWS, VPC, IAM, EKS, ECS, Fargate, Lambda, RDS, S3,
-  CloudFront, CloudWatch, CloudTrail, AWS Organizations, Well-Architected, and on
-  infrastructure files (*.tf, *.tfvars, *.tftest.hcl, *.tftpl, .terraform.lock.hcl,
-  terragrunt.hcl). Not a general-purpose DevOps skill — do not load it for CI/CD work that
-  has no AWS or Terraform component.
+  AWS + Terraform engineering standards. Load for writing or reviewing HCL, AWS provider
+  resources, modules, state/backends, IAM, secrets, and infrastructure CI, and for AWS
+  architecture decisions Terraform will encode. Triggers on Terraform, OpenTofu,
+  terraform plan/apply, and files (*.tf, *.tfvars, *.tftest.hcl, *.tftpl,
+  .terraform.lock.hcl, terragrunt.hcl). Do not load for live runtime debugging — use
+  aws-investigator — or for CI/CD with no AWS or Terraform component.
 ---
 
 # AWS Terraform Master
 
 Engineering standards for AWS infrastructure built with Terraform.
+
+Samples, layouts, and pipeline procedure live in `references/` — load the one that matches
+the task. Do not load them all.
 
 ## Scope
 
@@ -127,7 +124,7 @@ Sensible defaults, **not requirements** — a project's existing choices win.
 | Security scan | Checkov (+ Trivy) | Trivy is the successor to tfsec |
 | Cost | Infracost on PRs | Diff, not absolute |
 | Docs | terraform-docs, generated into `README.md` | Enforced in CI |
-| Tests | Native `.tftest.hcl`; Terratest only for real-world assertions | See Testing |
+| Tests | Native `.tftest.hcl`; Terratest only for real-world assertions | `references/delivery.md` |
 | Secrets | AWS Secrets Manager / SSM + write-only arguments | Never in `.tf` or `.tfvars` |
 | Tagging | Provider `default_tags` in the root module | Plus Organizations tag policies |
 
@@ -135,7 +132,8 @@ Sensible defaults, **not requirements** — a project's existing choices win.
 
 ## Repository and file structure
 
-Standard file names, always — the ecosystem's tooling assumes them.
+Standard file names, always — the ecosystem's tooling assumes them. Layout trees:
+`references/hcl-patterns.md`.
 
 | File | Contents |
 |---|---|
@@ -155,39 +153,6 @@ read with `file()`, `templates/` for `.tftpl` files read with `templatefile()`.
 **Do not split resources into service-named files** (`iam.tf`, `rds.tf`, `s3.tf`) by
 reflex. Resources belong in `main.tf`. Split only when one coherent group exceeds roughly
 150 lines — then `iam.tf` is reasonable.
-
-### Root module layout
-
-```
-.
-├── backend.tf
-├── data.tf
-├── envs
-│   ├── dev/terraform.tfvars
-│   ├── staging/terraform.tfvars
-│   └── prod/terraform.tfvars
-├── locals.tf
-├── main.tf
-├── outputs.tf
-├── providers.tf
-├── README.md
-├── variables.tf
-└── versions.tf
-```
-
-### Reusable module layout
-
-```
-.
-├── examples
-│   ├── complete/
-│   └── minimal/
-├── main.tf
-├── outputs.tf
-├── README.md          # generated inputs/outputs via terraform-docs
-├── variables.tf
-└── versions.tf        # required_providers ONLY, never a provider block
-```
 
 Follow registry conventions even when you have no plan to publish: repository named
 `terraform-aws-<name>`, semver git tags (`v1.4.0`). It costs nothing now and makes
@@ -211,23 +176,9 @@ forwarded by two intermediate modules is unreadable and undebuggable.
 **Never declare `provider` blocks inside a module.** Modules inherit providers from their
 caller. A module that configures its own provider cannot be used twice, cannot be used in
 another region, and breaks `terraform destroy`. Declare `required_providers` in the
-module's `versions.tf`; declare `provider` blocks only in the root module.
-
-```hcl
-# modules/service/versions.tf — correct
-terraform {
-  required_version = ">= 1.11"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = ">= 6.0"
-    }
-  }
-}
-```
-
-Use `>=` in shared modules (consumers need room to resolve a common version) and `~>` in
-root modules (you control the upgrade).
+module's `versions.tf`; declare `provider` blocks only in the root module. Use `>=` in
+shared modules (consumers need room to resolve a common version) and `~>` in root modules
+(you control the upgrade). Sample: `references/hcl-patterns.md`.
 
 **Every resource gets at least one output referencing it.** Without outputs, callers cannot
 express dependencies on what your module built, and Terraform cannot order them correctly.
@@ -248,16 +199,9 @@ able to read it during an incident.
 Rules for consuming community modules:
 
 - **Pin to a commit hash**, with the version in a trailing comment. Tags are mutable;
-  public registries are a supply-chain surface.
-
-  ```hcl
-  module "vpc" {
-    source = "github.com/terraform-aws-modules/terraform-aws-vpc.git?ref=8bbc07e" # v5.13.0
-  }
-  ```
-
-  A registry `version = "5.13.0"` pin is acceptable where your organization already trusts
-  the registry; a floating `~>` on a third-party module is not.
+  public registries are a supply-chain surface. A registry `version = "5.13.0"` pin is
+  acceptable where your organization already trusts the registry; a floating `~>` on a
+  third-party module is not.
 - **Customize through variables. Never fork.** Fork only to contribute the fix upstream.
 - **Read the dependency tree before adopting**: required providers, nested modules,
   external data sources. Cascading dependencies are how a module surprises you.
@@ -277,19 +221,8 @@ Rules for consuming community modules:
 - **Be stingy with variables.** Adding one later is backward compatible; removing one is
   not. If you cannot name a concrete case where a value must differ, use a `local`.
 - **Validate at the boundary.** Use `validation` blocks for anything with a real constraint
-  — this is input validation, and it is never "over-engineering".
-
-  ```hcl
-  variable "environment" {
-    type        = string
-    description = "Deployment environment."
-    validation {
-      condition     = contains(["dev", "staging", "prod"], var.environment)
-      error_message = "environment must be one of: dev, staging, prod."
-    }
-  }
-  ```
-
+  — this is input validation, and it is never "over-engineering". Sample:
+  `references/hcl-patterns.md`.
 - **Never pass a resource attribute through an input variable to fake a dependency.**
   Reference the attribute directly so Terraform builds the implicit dependency edge.
 - Mark sensitive outputs `sensitive = true`. This suppresses CLI display; it does **not**
@@ -315,34 +248,13 @@ Rules for consuming community modules:
 
 ## Resource authoring
 
+Samples: `references/hcl-patterns.md`.
+
 **Prefer attachment resources over inline blocks.** Inline pseudo-resources produce
-confusing diffs and fight with anything else managing the same relationship.
-
-```hcl
-# Avoid — inline rules
-resource "aws_security_group" "this" {
-  ingress { ... }
-  egress  { ... }
-}
-
-# Prefer — separate rule resources (provider v5+)
-resource "aws_security_group" "this" {
-  name   = "svc-api"
-  vpc_id = var.vpc_id
-}
-
-resource "aws_vpc_security_group_ingress_rule" "https" {
-  security_group_id = aws_security_group.this.id
-  description       = "TLS from VPC"
-  cidr_ipv4         = var.vpc_cidr
-  from_port         = 443
-  to_port           = 443
-  ip_protocol       = "tcp"
-}
-```
-
-The same applies to `aws_iam_role_policy_attachment` over inline `inline_policy`, and
-`aws_route` over inline `route` blocks.
+confusing diffs and fight with anything else managing the same relationship. Prefer
+`aws_vpc_security_group_ingress_rule` over inline `ingress`,
+`aws_iam_role_policy_attachment` over `inline_policy`, and `aws_route` over inline `route`
+blocks.
 
 **Use `for_each`, not `count`, for sets of non-identical things.** `count` indexes by
 position, so removing the second of three items destroys and recreates the third.
@@ -350,13 +262,6 @@ position, so removing the second of three items destroys and recreates the third
 
 **Use `moved` blocks when refactoring**, never `terraform state mv`. Refactoring is code;
 it belongs in the diff and in review.
-
-```hcl
-moved {
-  from = aws_instance.web
-  to   = module.web.aws_instance.this
-}
-```
 
 **Use `import` blocks (1.5+)** rather than the `terraform import` CLI, for the same reason:
 the plan shows the import, and the reviewer sees it.
@@ -376,21 +281,9 @@ that work is invisible to plan, state, and destroy.
 
 ## State and backends
 
-```hcl
-terraform {
-  backend "s3" {
-    bucket       = "acme-tfstate-prod"
-    key          = "platform/network/terraform.tfstate"
-    region       = "eu-west-1"
-    encrypt      = true
-    use_lockfile = true
-  }
-}
-```
-
-The state bucket itself must have: **versioning enabled** (this is your rollback),
-server-side encryption, public access fully blocked, an AWS Backup plan, and a restrictive
-bucket policy.
+Backend block: `references/hcl-patterns.md`. S3 + `use_lockfile = true`. The state bucket
+itself must have: **versioning enabled** (this is your rollback), server-side encryption,
+public access fully blocked, an AWS Backup plan, and a restrictive bucket policy.
 
 ### Separate backends per environment
 
@@ -435,20 +328,8 @@ infrastructure pipeline produces.
 
 ## Providers and versions
 
-**Root modules pin narrowly. Shared modules constrain loosely.**
-
-```hcl
-# Root module
-terraform {
-  required_version = "~> 1.14"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 6.30"
-    }
-  }
-}
-```
+**Root modules pin narrowly. Shared modules constrain loosely.** Sample pins and the
+resource-level `region` argument: `references/hcl-patterns.md`.
 
 - **Commit `.terraform.lock.hcl`.** It is the reproducibility guarantee. Regenerate for all
   platforms your team and CI use:
@@ -456,15 +337,7 @@ terraform {
 - **Fail CI on unpinned providers.** TFLint's `terraform_required_providers` rule does
   this. An implicit major upgrade reaching production is an entirely preventable outage.
 - **Upgrade minors in non-production first**, read the changelog, then promote.
-- **Multi-region on provider v6+ uses the `region` argument**, not aliased providers:
-
-  ```hcl
-  resource "aws_s3_bucket" "replica" {
-    bucket = "acme-assets-replica"
-    region = "us-east-1"
-  }
-  ```
-
+- **Multi-region on provider v6+ uses the `region` argument**, not aliased providers.
   Aliased providers remain correct for **multi-account** (different `assume_role`) and for
   provider-level configuration that genuinely differs. Global services — IAM, CloudFront,
   Route 53, Organizations — have no `region`.
@@ -482,20 +355,8 @@ Order of preference:
    *container* in Terraform; populate the value out of band. The application reads it at
    runtime.
 2. **Write-only arguments (Terraform 1.11+ / provider v6+)** for values a resource must
-   receive at create/update time. `*_wo` arguments never enter plan or state.
-
-   ```hcl
-   ephemeral "aws_secretsmanager_secret_version" "db" {
-     secret_id = aws_secretsmanager_secret.db.id
-   }
-
-   resource "aws_db_instance" "this" {
-     # ...
-     password_wo         = ephemeral.aws_secretsmanager_secret_version.db.secret_string
-     password_wo_version = var.db_password_version   # bump to trigger a rotation
-   }
-   ```
-
+   receive at create/update time. `*_wo` arguments never enter plan or state. Sample:
+   `references/hcl-patterns.md`.
 3. **Ephemeral resources / `ephemeral` variables (1.10+)** for anything needed only during
    the run — short-lived tokens, generated passwords. Never persisted.
 4. **`sensitive = true`** as a last resort for values that must live in state anyway. It
@@ -511,23 +372,10 @@ committed non-sensitive env files) and `*.tfstate*` to `.gitignore`.
 
 **Never use long-lived access keys.** Not locally, not in CI.
 
-**In CI — GitHub OIDC.** No stored AWS credentials at all:
-
-```yaml
-permissions:
-  id-token: write        # required for OIDC
-  contents: read
-  pull-requests: write   # to comment the plan
-
-steps:
-  - uses: aws-actions/configure-aws-credentials@v4
-    with:
-      role-to-assume: arn:aws:iam::111122223333:role/gha-terraform-plan
-      aws-region: eu-west-1
-```
-
-Scope the trust policy to the specific repository **and ref** — a trust policy matching
-`repo:acme/*` lets any repository in the org assume your production role.
+**In CI — GitHub OIDC.** No stored AWS credentials. Workflow shape:
+`references/hcl-patterns.md`. Scope the trust policy to the specific repository **and ref**
+— a trust policy matching `repo:acme/*` lets any repository in the org assume your
+production role.
 
 **Locally — assume a role**, via `assume_role` in the provider block or an AWS CLI profile
 with `role_arn`. Both yield temporary credentials.
@@ -549,23 +397,7 @@ Re-run it periodically — permissions accrete.
 ## Tagging
 
 Apply organization-wide tags through provider `default_tags` in the **root module** —
-never repeat them on every resource:
-
-```hcl
-provider "aws" {
-  region = var.region
-  default_tags {
-    tags = {
-      Environment = var.environment
-      Project     = var.project
-      Owner       = var.owning_team
-      CostCenter  = var.cost_center
-      ManagedBy   = "terraform"
-      Repository  = var.repository_url
-    }
-  }
-}
-```
+never repeat them on every resource. Sample: `references/hcl-patterns.md`.
 
 - Resource-level `tags` merge with defaults and win on conflict. Use them only for what is
   genuinely per-resource, typically `Name`.
@@ -582,117 +414,26 @@ provider "aws" {
 
 ## Testing
 
-**Native tests (`.tftest.hcl`, Terraform 1.6+) are the default.** Same language, no Go
-toolchain, runs in CI without cloud credentials when you stay at plan level.
-
-```hcl
-# tests/defaults.tftest.hcl
-variables {
-  environment = "dev"
-  vpc_cidr    = "10.0.0.0/16"
-}
-
-run "encryption_is_enforced" {
-  command = plan          # no infrastructure created
-
-  assert {
-    condition     = aws_s3_bucket_server_side_encryption_configuration.this.rule[0].apply_server_side_encryption_by_default[0].sse_algorithm == "aws:kms"
-    error_message = "Bucket must use KMS encryption."
-  }
-}
-
-run "rejects_invalid_environment" {
-  command = plan
-  variables { environment = "production" }   # not in the allowed list
-
-  expect_failures = [var.environment]
-}
-```
-
-- `command = plan` — unit test. Fast, free, no credentials. **This is where most of your
-  tests belong**: variable validation, conditional logic, computed names, policy documents.
-- `command = apply` — integration test. Real resources, real cost, real teardown. Reserve
-  for modules whose value is in how AWS actually behaves.
-
-**Know what a native test proves.** It asserts against what the *provider reported*, not
-against reality. A test can pass while the deployed thing does not work. When you need to
-assert that the endpoint actually serves traffic or the IAM policy actually denies the
-call, that is **Terratest** (Go) or a post-apply smoke test — not the native framework.
-
-Use `check` blocks for assertions that should run against real infrastructure on every plan
-without blocking it (certificate expiry, endpoint health).
-
-**Test what has logic.** A module that passes six variables to one resource needs no test.
-A module with conditionals, `for_each` over derived maps, or a generated policy document
-does.
+Native `.tftest.hcl` (1.6+) at `command = plan` is the default. Test what has logic —
+conditionals, `for_each` over derived maps, generated policy documents. A module that
+forwards six variables to one resource needs no test. Native tests assert what the
+*provider reported*, not live behavior; that is Terratest or a smoke test. Samples and
+the plan-vs-reality boundary: `references/delivery.md`.
 
 ---
 
 ## CI/CD
 
-The pipeline, in order:
-
-1. **Pre-commit (local):** `terraform fmt`, `terraform validate`, TFLint, Checkov,
-   terraform-docs. Same checks as CI, so failures surface in seconds instead of minutes.
-2. **On pull request:** `fmt -check` → `init -backend=false` → `validate` → TFLint (with
-   the AWS ruleset) → Checkov/Trivy → `terraform test` → **`terraform plan`, posted as a PR
-   comment** → Infracost diff.
-3. **Human review** of the plan output. Not the HCL alone — the plan.
-4. **On merge to the protected branch:** `terraform apply` with the saved plan file.
-
-```yaml
-# plan on PR, apply on merge — the shape, not a drop-in
-- run: terraform plan -out=tfplan -input=false -lock-timeout=5m
-- run: terraform show -no-color tfplan > plan.txt   # post plan.txt as the PR comment
-# on main only:
-- run: terraform apply -input=false tfplan          # the same plan, not a fresh one
-```
-
-**Apply the saved plan file**, never a fresh `apply -auto-approve`. Applying a re-planned
-change is applying something nobody reviewed.
-
-Non-negotiables:
-
-- **Branch protection**: required reviews, required checks, no force-push.
-- **`-lock-timeout`** set, so concurrent runs queue rather than fail.
-- **Never `-auto-approve` outside a merged, protected-branch pipeline.**
-- Plans from **fork PRs run with the read-only role**, or not at all. A plan can exfiltrate
-  state contents.
-- Environments gated by GitHub Environments with required reviewers for production.
-
-### Drift
-
-Run `terraform plan -detailed-exitcode` on a schedule. Exit code `0` = no changes, `2` =
-drift, `1` = error. Alert on `2`.
-
-**Do not auto-remediate production.** Blanket auto-apply of drift is how a one-way-door
-attribute change destroys a live database, and how a manual hotfix gets silently reverted
-mid-incident. Correct handling: detect → investigate → decide whether code or reality is
-wrong → fix through a reviewed PR. Ungated auto-reconciliation is acceptable only in
-low-stakes environments.
+Plan on PR, apply the **saved plan file** on merge to a protected branch. Never
+`-auto-approve` outside that path. Fork PRs get the read-only role. Do not auto-remediate
+production drift. Pipeline, lock-timeout, and the workflow shape: `references/delivery.md`.
 
 ---
 
 ## Toolchain
 
-| Tool | Purpose | Note |
-|---|---|---|
-| `terraform fmt` | Canonical formatting | `-check -recursive` in CI |
-| `terraform validate` | Syntax and internal consistency | Needs `init`; use `-backend=false` |
-| **TFLint** | Provider-aware linting, deprecated syntax, unpinned versions | Add `tflint-ruleset-aws` |
-| **Checkov** | Misconfiguration and policy scanning of HCL | AWS's named recommendation |
-| **Trivy** | Misconfiguration + vulnerability scanning | Successor to tfsec |
-| **Infracost** | Cost diff on pull requests | Cost as a review signal |
-| **terraform-docs** | Generates input/output tables into README | Enforce in CI |
-| **pre-commit** | Runs all of the above locally | `pre-commit-terraform` hooks |
-
-TFLint is **not** a security scanner and Checkov is **not** a linter. Run both.
-
-For policy-as-code beyond scanners: **OPA/Rego** when you want one engine across Terraform,
-Kubernetes, and CI; **Sentinel** if you are on HCP Terraform. Whichever you choose, the
-decision that actually matters is the **enforcement level** — advisory, soft-mandatory, or
-hard-mandatory. Most rollout pain comes from making a rule hard-mandatory before it is
-proven, or leaving a critical rule advisory forever.
+`fmt` + `validate` + TFLint (AWS ruleset) + Checkov + Trivy. TFLint is not a scanner;
+Checkov is not a linter. Run both. Tool table and policy-as-code: `references/delivery.md`.
 
 ---
 
@@ -703,6 +444,8 @@ Terraform then encodes — load the relevant reference:
 
 | Question | Reference |
 |---|---|
+| HCL samples, layouts, OIDC, tags | `references/hcl-patterns.md` |
+| Tests, CI/CD, toolchain | `references/delivery.md` |
 | Is this design sound? What should I review against? | `references/well-architected.md` |
 | VPC layout, CIDR planning, subnets, NAT, endpoints, IPAM | `references/networking.md` |
 | Account structure, OUs, SCPs, guardrails, landing zone | `references/multi-account.md` |
@@ -716,22 +459,9 @@ Read the reference before advising on that area. Architecture guidance is where 
 wrong answers are most expensive — a bad CIDR plan cannot be fixed later without
 renumbering, and a bad account boundary cannot be fixed without a migration.
 
-### Investigating live infrastructure
-
-Debugging a running system is a different activity from building one, and it has its own
-rule: **read before you touch.**
-
-- **Never mutate to diagnose.** Restarting the service destroys the evidence and usually
-  "fixes" the symptom, guaranteeing a recurrence with the diagnostic trail gone.
-- **Anything you change outside Terraform becomes drift** that the next apply reverts.
-  When an incident forces an out-of-band change, record it and reconcile it into code the
-  same day.
-- **Capture time-limited evidence first.** Stopped ECS tasks are retained roughly an hour;
-  after that the stop reason is unrecoverable.
-- Read-only AWS CLI calls (`describe-*`, `get-*`, `list-*`, `logs tail`) are safe and
-  encouraged. `references/debugging.md` has the failure signatures and query patterns.
-
-### The one rule that survives every architecture
+Live incidents: **read before you touch.** Never mutate to diagnose. Out-of-band changes
+are drift — reconcile them into code the same day. Failure signatures:
+`references/debugging.md`. Delegate runtime debugging to `aws-investigator`.
 
 **Start from the workload, not the service.** The most common failure in AWS design is
 choosing a technology and then bending requirements to fit it. If you cannot name the
