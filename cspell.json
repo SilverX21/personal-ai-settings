@@ -109,6 +109,7 @@
     ".git/**",
     "node_modules/**",
     "third-party/**",
-    "presets/**/.claude/**"
+    "presets/**/.claude/**",
+    "skills/travel-partner/**"
   ]
 }
