@@ -15,8 +15,8 @@ rules/          tool-agnostic kernel — communication, principles, workflow, re
 claude/         Claude Code adapter extras shared across presets (model policy)
 cursor/         Cursor adapter extras shared across presets (pointer today)
 copilot/        Copilot adapter extras shared across presets (pointer today)
-skills/         skills I wrote or own outright (dotnet-master, neon-postgres, travel-partner, ...)
-agents/         subagents I wrote (DocsExplorer)
+skills/         skills I wrote or own outright (dotnet-master, neon-postgres, plan-master, travel-partner, ...)
+agents/         subagents I wrote (DocsExplorer, plan-* agents used by plan-master)
 config/         reference copies of settings.json / settings.local.json
 third-party/    manifest of everything installed from upstream — not vendored
 presets/        drop-in bundles per stack (native files per tool)
