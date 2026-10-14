@@ -12,6 +12,10 @@
     {
       "name": "test-guard",
       "source": "./claude/mods/test-guard"
+    },
+    {
+      "name": "secret-shield",
+      "source": "./claude/mods/secret-shield"
     }
   ]
 }

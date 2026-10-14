@@ -1,0 +1,17 @@
+{
+  "name": "secret-shield",
+  "version": "0.1.0",
+  "description": "Stops secrets from reaching a prompt or a git-tracked file: redact, send anyway or cancel. Includes a log scrub script.",
+  "author": {
+    "name": "Nuno Araujo"
+  },
+  "userConfig": {
+    "extraHeaders": {
+      "type": "string",
+      "multiple": true,
+      "title": "Extra secret headers",
+      "description": "Header names whose values are secrets, on top of x-api-key, api-key, ocp-apim-subscription-key and authorization (e.g. your own APIs' key headers).",
+      "default": []
+    }
+  }
+}
