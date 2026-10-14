@@ -2,10 +2,9 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Meter, PendingHandoff } from '../types'
-import { bar, cacheState, cacheTone, contextTone, minutesLeft, prettyModel, ttlFromUsage } from './logic'
+import { DEFAULT_THRESHOLDS, bar, cacheState, cacheTone, contextTone, minutesLeft, prettyModel, thresholds, ttlFromUsage } from './logic'
+import type { Thresholds } from './logic'
 
-const WARN_PERCENT = 45
-const COLD_TIP_PERCENT = 40
 const DEFAULT_TTL = 60
 const TICK_MS = 15_000
 const REFILL_WINDOW_MS = 30 * 60_000
@@ -30,7 +29,11 @@ const meter = atom({ plugin: 'session-meter', key: 'meter' } as const, INITIAL)
 const TRANSCRIPT_SCRIPT = `f=$(ls "\${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/projects/*/"$1".jsonl 2>/dev/null | head -1)
 [ -n "$f" ] && tail -c 400000 "$f" | grep -oE '"ephemeral_(5m|1h)_input_tokens":[0-9]+' | tail -2`
 
-export const register: Register = on => {
+// Set from the plugin's options each time the module loads, so refresh() and the band read the same values.
+let limits: Thresholds = DEFAULT_THRESHOLDS
+
+export const register: Register = (on, options) => {
+  limits = thresholds(options)
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'session-meter',
@@ -39,6 +42,16 @@ export const register: Register = on => {
     })
     $.clock.every(TICK_MS, () => void refresh($).catch(() => undefined))
     void refresh($).catch(() => undefined)
+    return next(e)
+  })
+
+  // A /clear fires no session.start for a mod: session.end with reason 'clear' is the only sign of one.
+  on('session.end', async ($, e, next) => {
+    if (e.reason === 'clear') {
+      const key = `handoff:${await $.session.cwd()}`
+      const pending = (await $.store.get(key)) as PendingHandoff | undefined
+      if (pending && pending.fromSession === e.sessionId) await $.store.set(key, { ...pending, isCleared: true })
+    }
     return next(e)
   })
 
@@ -80,8 +93,8 @@ export const register: Register = on => {
     const remaining = e.props.isWorking || m.lastTouch === null ? m.ttlMin * 60_000 : m.ttlMin * 60_000 - (m.now - m.lastTouch)
     const state = cacheState(remaining, m.ttlMin)
     const percent = m.percent === null ? null : Math.round(m.percent)
-    const isWarn = percent !== null && percent >= WARN_PERCENT
-    const isColdAndBig = state === 'Cold' && percent !== null && percent >= COLD_TIP_PERCENT
+    const isWarn = percent !== null && percent >= limits.warn
+    const isColdAndBig = state === 'Cold' && percent !== null && percent >= limits.coldTip
 
     // Keep what the hooks below drew (other bands) instead of replacing it.
     return (
@@ -93,7 +106,7 @@ export const register: Register = on => {
         {percent === null ? (
           <Text dimColor>ctx –</Text>
         ) : (
-          <Text color={contextTone(percent, WARN_PERCENT)} bold={isWarn}>
+          <Text color={contextTone(percent, limits)} bold={isWarn}>
             ctx {percent}% {bar(percent)}
           </Text>
         )}
@@ -129,7 +142,7 @@ async function refresh($: EngineInterface): Promise<void> {
   const before = await read($, meter)
   const isNewSession = before.sessionId !== '' && before.sessionId !== sessionId
   const base = isNewSession ? { ...INITIAL, ttlMin: before.ttlMin, ttlSource: before.ttlSource } : before
-  const shouldWarn = percent !== null && percent >= WARN_PERCENT && !base.warned
+  const shouldWarn = percent !== null && percent >= limits.warn && !base.warned
 
   await update($, meter, (m): Meter => ({
     ...(isNewSession ? base : m),
@@ -191,7 +204,7 @@ async function finishHandoff($: EngineInterface): Promise<void> {
 async function refillHandoff($: EngineInterface, sessionId: string, now: number): Promise<void> {
   const key = `handoff:${await $.session.cwd()}`
   const pending = (await $.store.get(key)) as PendingHandoff | undefined
-  if (!pending || pending.isUsed || pending.fromSession === sessionId || now - pending.at > REFILL_WINDOW_MS) return
+  if (!pending || !pending.isCleared || pending.isUsed || pending.fromSession === sessionId || now - pending.at > REFILL_WINDOW_MS) return
   if ((await $.prompt.read()).text !== '') return
   const { isFilled } = await $.prompt.fill({ text: pending.text, mode: 'replace' })
   if (!isFilled) return

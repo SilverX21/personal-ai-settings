@@ -19,6 +19,8 @@ export type PendingHandoff = {
   at: number
   fromSession: string
   isUsed: boolean
+  // Set by session.end with reason 'clear': only a /clear may refill, not a resume or a fresh start.
+  isCleared?: boolean
 }
 
 declare module 'claude-code' {

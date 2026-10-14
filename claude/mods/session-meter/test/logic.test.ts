@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { bar, cacheState, minutesLeft, prettyModel, ttlFromUsage } from '../hooks/logic'
+import { DEFAULT_THRESHOLDS, bar, cacheState, contextTone, minutesLeft, prettyModel, thresholds, ttlFromUsage } from '../hooks/logic'
 
 const MIN = 60_000
 
@@ -40,4 +40,24 @@ test('bar and minutesLeft', () => {
   expect(minutesLeft(31.5 * MIN)).toBe('31m')
   expect(minutesLeft(30_000)).toBe('<1m')
   expect(minutesLeft(0)).toBe('expired')
+})
+
+describe('thresholds', () => {
+  test('no options gives the defaults', () => {
+    expect(thresholds({})).toEqual(DEFAULT_THRESHOLDS)
+  })
+
+  test('good values are used, bad ones fall back one by one', () => {
+    expect(thresholds({ yellowPercent: 20, warnPercent: 'abc', redPercent: 150, coldTipPercent: -1 })).toEqual({
+      ...DEFAULT_THRESHOLDS,
+      yellow: 20,
+    })
+    expect(thresholds({ warnPercent: '' }).warn).toBe(DEFAULT_THRESHOLDS.warn)
+    expect(thresholds({ warnPercent: 0 }).warn).toBe(0)
+  })
+
+  test('contextTone follows the thresholds', () => {
+    const t = { yellow: 10, warn: 20, red: 30, coldTip: 5 }
+    expect([5, 10, 20, 29, 30].map(p => contextTone(p, t))).toEqual([undefined, 'warning', 'warning', 'warning', 'error'])
+  })
 })

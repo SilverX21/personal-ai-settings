@@ -2,6 +2,38 @@
   "name": "session-meter",
   "version": "0.1.0",
   "description": "Band above the prompt: model, context fill, prompt-cache warmth and countdown, and a one-click handoff at 45% context.",
-  "author": { "name": "Nuno Araujo" },
-  "types": "./types/index.d.ts"
+  "author": {
+    "name": "Nuno Araujo"
+  },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "yellowPercent": {
+      "type": "number",
+      "title": "Context % where the meter turns yellow",
+      "description": "Below this the context figure has no color.",
+      "required": false,
+      "default": 30
+    },
+    "warnPercent": {
+      "type": "number",
+      "title": "Context % to warn and offer a handoff",
+      "description": "Turns the meter amber and bold, shows Prepare handoff, and raises one toast per session.",
+      "required": false,
+      "default": 45
+    },
+    "redPercent": {
+      "type": "number",
+      "title": "Context % where the meter turns red",
+      "description": "At or above this the context figure is red.",
+      "required": false,
+      "default": 60
+    },
+    "coldTipPercent": {
+      "type": "number",
+      "title": "Context % for the cold-cache tip",
+      "description": "When the cache is cold and context is at least this full, the band says the next message rewrites it.",
+      "required": false,
+      "default": 40
+    }
+  }
 }

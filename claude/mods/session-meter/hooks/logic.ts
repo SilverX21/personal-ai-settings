@@ -27,9 +27,28 @@ export function cacheTone(state: CacheState): Tone {
   return 'error'
 }
 
-export function contextTone(percent: number, warnPercent: number): Tone {
-  if (percent >= 60) return 'error'
-  if (percent >= 30 || percent >= warnPercent) return 'warning'
+export type Thresholds = { yellow: number; warn: number; red: number; coldTip: number }
+
+export const DEFAULT_THRESHOLDS: Thresholds = { yellow: 30, warn: 45, red: 60, coldTip: 40 }
+
+// A bad or missing setting falls back to its default: a NaN would make every comparison false, silently turning the warnings off.
+export function thresholds(options: Readonly<Record<string, unknown>>): Thresholds {
+  const pick = (value: unknown, fallback: number): number => {
+    const n = Number(value)
+    return value !== undefined && value !== '' && Number.isFinite(n) && n >= 0 && n <= 100 ? n : fallback
+  }
+  const d = DEFAULT_THRESHOLDS
+  return {
+    yellow: pick(options.yellowPercent, d.yellow),
+    warn: pick(options.warnPercent, d.warn),
+    red: pick(options.redPercent, d.red),
+    coldTip: pick(options.coldTipPercent, d.coldTip),
+  }
+}
+
+export function contextTone(percent: number, t: Thresholds): Tone {
+  if (percent >= t.red) return 'error'
+  if (percent >= t.yellow || percent >= t.warn) return 'warning'
   return undefined
 }
 
