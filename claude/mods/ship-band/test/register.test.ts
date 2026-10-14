@@ -151,3 +151,15 @@ test('the band keeps what the hooks below it drew', async ($, on) => {
   expect(await ui.find({ type: 'Text', text: /#12345 feat\/12345-export/ })).toBeDefined()
   await ui.unmount()
 })
+
+test('a subagent turn ending does not count the main turn skill as done', async ($, on) => {
+  world(on, { name: 'feat/one' })
+  await start($)
+  await $.tool.call({ tool: 'Skill', skill: 'code-review' })
+
+  await $.turn.complete({ reason: 'answer', answer: '', durationMs: 1, isAborted: false, turnId: 'sub', agentId: 'agent-1' })
+  expect((await status($)).text).toContain('Review ○')
+
+  await turnEnd($)
+  expect((await status($)).text).toContain('Review ✓')
+})

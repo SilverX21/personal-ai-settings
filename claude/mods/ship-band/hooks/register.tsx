@@ -94,6 +94,8 @@ export const register: Register = on => {
   }).catch(($, e, next) => next(e))
 
   on('turn.complete', async ($, e, next) => {
+    // A subagent's turn ending is not the main turn ending: its skills must not be flushed yet.
+    if (e.agentId !== undefined) return next(e)
     const done = Object.entries(await read($, pending))
     await update($, pending, () => ({}))
     if (e.reason === 'answer') for (const [skill, isStale] of done) await record($, { kind: 'skill', skill, isStale })
