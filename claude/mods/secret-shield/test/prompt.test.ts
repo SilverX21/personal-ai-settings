@@ -71,10 +71,10 @@ test('a gitignored file is written without asking', async ($, on) => {
   expect(written).toEqual([WRITE.content])
 })
 
-test('extraHeaders adds header names to look for', { options: { extraHeaders: ['x-acme-token'] } }, async ($, on) => {
+test('a field named like a secret is caught without any config', async ($, on) => {
   const seen: string[] = []
   answerAsk(on, 'Redact & send')
   capturePrompts(on, seen)
   await $.prompt.submit({ wait: false, origin: { kind: 'composer' }, text: 'x-acme-token: abcd1234efgh5678' })
-  expect(seen).toEqual(['x-acme-token: <REDACTED:header-secret>'])
+  expect(seen).toEqual(['x-acme-token: <REDACTED:named-secret>'])
 })

@@ -29,12 +29,10 @@ async function isTracked($: EngineInterface, file: string): Promise<boolean> {
   return run?.exitCode === 1
 }
 
-export const register: Register = (on, options) => {
-  const headers = (options.extraHeaders as readonly string[] | undefined) ?? []
-
+export const register: Register = on => {
   on('prompt.submit', async ($, e, next) => {
     if (e.isMeta) return next(e)
-    const findings = detect(e.text, { headers })
+    const findings = detect(e.text)
     if (findings.length === 0) return next(e)
 
     const choice = await ask($, `Possible secret in your prompt (${summary(findings)}). What now?`, [REDACT, SEND, CANCEL])
@@ -47,7 +45,7 @@ export const register: Register = (on, options) => {
   }).catch(($, e, next) => next(e))
 
   on('tool.call', { tool: 'Write' }, async ($, e, next) => {
-    const findings = detect(e.content, { entropy: false, headers })
+    const findings = detect(e.content, { entropy: false })
     if (findings.length === 0 || !(await isTracked($, e.file_path))) return next(e)
     const choice = await ask($, `Writing a possible secret (${summary(findings)}) to ${e.file_path}, which git tracks. What now?`, [REDACT_WRITE, WRITE, CANCEL])
     if (choice === WRITE) return next(e)
@@ -56,7 +54,7 @@ export const register: Register = (on, options) => {
   }).catch(($, e, next) => next(e))
 
   on('tool.call', { tool: 'Edit' }, async ($, e, next) => {
-    const findings = detect(e.new_string, { entropy: false, headers })
+    const findings = detect(e.new_string, { entropy: false })
     if (findings.length === 0 || !(await isTracked($, e.file_path))) return next(e)
     const choice = await ask($, `Writing a possible secret (${summary(findings)}) to ${e.file_path}, which git tracks. What now?`, [REDACT_WRITE, WRITE, CANCEL])
     if (choice === WRITE) return next(e)

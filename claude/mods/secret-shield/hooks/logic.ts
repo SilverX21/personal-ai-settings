@@ -18,20 +18,15 @@ const RULES: readonly Rule[] = [
   // Connection strings have no spaces around '=' (code like `Password = AppRole` does).
   // Placeholders and variables (`<…>`, `$X`, `{X}`, `%X%`) are not passwords.
   { kind: 'connection-password', pattern: /\b(?:Password|Pwd)=(?![<${%])([^;"'\s*]{4,})/gi, group: 1 },
-]
 
-// Standard header names; more come from the `extraHeaders` option (your own APIs' header names).
-const HEADERS = ['x-api-key', 'ocp-apim-subscription-key', 'api[-_]?key', 'authorization']
-const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-
-function headerRule(extra: readonly string[]): Rule {
-  const names = [...HEADERS, ...extra.map(h => escape(h.trim())).filter(Boolean)].join('|')
-  return {
-    kind: 'header-secret',
-    pattern: new RegExp(`(?:${names})["']?\\s*[:=]\\s*["']?(?:Bearer\\s+|Basic\\s+)?([^\\s"',;]{16,})`, 'gi'),
+  // Any field named like a secret, in any format: header, JSON/YAML key, env var, URL parameter
+  // (x-api-key, clientSecret, AUTH_TOKEN, db_password, sig=). The value check below drops the false ones.
+  {
+    kind: 'named-secret',
+    pattern: /(?<![A-Za-z0-9])[A-Za-z0-9_.-]*(?:key|secret|token|passw(?:or)?d|pwd|credentials?|auth(?:orization)?|sig(?:nature)?)["']?\s*[:=]\s*["']?(?:Bearer\s+|Basic\s+)?([^\s"',;&\\`]{16,})/gi,
     group: 1,
-  }
-}
+  },
+]
 
 // Long runs with letters and digits; '/' and '.' split them so paths and URLs stay apart.
 const CANDIDATE = /[A-Za-z0-9_+=-]{32,}/g
@@ -49,10 +44,20 @@ export function entropy(s: string): number {
   return bits
 }
 
-// Placeholders, variables, GUIDs and plain identifiers after `api-key:` are not secrets.
-function isHeaderSecret(value: string): boolean {
-  if (ALLOWED[0]!.test(value) || ALLOWED[2]!.test(value)) return false
-  if (/^[$<{%]|^\*+$|REDACTED|YOUR_|xxx|example/i.test(value)) return false
+// Env and code names (MY_KEY, __ENV.API_SECRET_V2, ${CI_TOKEN}): every part letters or digits;
+// with two or more parts an ALL-CAPS part may mix them (V2), a lone one may not (hex keys).
+function isName(s: string): boolean {
+  const parts = s.replace(/^\$?\{|\}$/g, '').split(/[-_.]/).filter(Boolean)
+  const part = parts.length > 1 ? /^(?:[A-Za-z]+|[0-9]+|[A-Z0-9]+)$/ : /^(?:[A-Za-z]+|[0-9]+)$/
+  return parts.every(p => part.test(p))
+}
+
+// Placeholders, variables and names after `api-key:` are not secrets.
+function isNamedSecret(name: string, value: string): boolean {
+  if (/^public/i.test(name)) return false // .NET PublicKeyToken, public keys
+  if (ALLOWED[0]!.test(value) || isName(value)) return false
+  if (/^[$<{%]|^\*{3,}|REDACTED|YOUR_|xxx|example/i.test(value)) return false
+  if (/[():]|^[/~.]|^\d{4}-\d{2}-\d{2}/.test(value)) return false // code, composite keys, URLs, paths, dates
   return /[0-9]/.test(value) && /[A-Za-z]/.test(value)
 }
 
@@ -63,21 +68,20 @@ function looksRandom(s: string): boolean {
   return entropy(s) > 4
 }
 
-/** `headers`: extra header names whose values are secrets, on top of the standard ones. */
-export type DetectOptions = { entropy?: boolean; headers?: readonly string[] }
+export type DetectOptions = { entropy?: boolean }
 
 /** `entropy: false` keeps only the precise patterns: use it for tool output, where ids and base64 abound. */
-export function detect(text: string, { entropy: useEntropy = true, headers = [] }: DetectOptions = {}): Finding[] {
+export function detect(text: string, { entropy: useEntropy = true }: DetectOptions = {}): Finding[] {
   const found: Finding[] = []
   const overlaps = (start: number, end: number) => found.some(f => start < f.end && end > f.start)
 
-  for (const rule of [...RULES, headerRule(headers)]) {
+  for (const rule of RULES) {
     for (const m of text.matchAll(rule.pattern)) {
       const value = rule.group ? m[rule.group] : m[0]
       if (!value || m.index === undefined) continue
       const start = m.index + m[0].lastIndexOf(value)
       const end = start + value.length
-      if (rule.kind === 'header-secret' && !isHeaderSecret(value)) continue
+      if (rule.kind === 'named-secret' && !isNamedSecret(m[0], value)) continue
       if (!overlaps(start, end)) found.push({ kind: rule.kind, start, end, value })
     }
   }

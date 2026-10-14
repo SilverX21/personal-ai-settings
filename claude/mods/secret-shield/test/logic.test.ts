@@ -17,8 +17,14 @@ describe('finds', () => {
     expect(kinds('-----BEGIN RSA PRIVATE KEY-----\nMIIE\n-----END RSA PRIVATE KEY-----')).toEqual(['private-key'])
   })
 
-  test('header values and connection-string passwords', () => {
-    expect(kinds("curl -H 'x-api-key: 1a2b3c4d5e6f7a8b.c9d0e1f2-3a4b-5c6d'")).toEqual(['header-secret'])
+  test('values of fields named like secrets, in any format', () => {
+    for (const text of [
+      "curl -H 'x-api-key: 1a2b3c4d5e6f7a8b.c9d0e1f2-3a4b-5c6d'",
+      "-H 'x-acme-token: Zt5Kq9Lm-Wx2Rv7Np4-Hc8Jd3Gf6Ys1Bu0Ea'",
+      '{ "clientSecret": "q8Fv2R.kLm9Tz~Wp4Hx7Nc3" }',
+      'MY_SERVICE_AUTH=Wx2Rv7Np4Hc8Jd3Gf6Ys',
+      'https://acct.blob.core.windows.net/c?sv=2024&sig=Ab3dEf6hIj9kLm2nOp5q%3D',
+    ]) expect(kinds(text, false)).toEqual(['named-secret'])
     expect(kinds('Host=db;Username=app;Password=s3cretPass;')).toEqual(['connection-password'])
   })
 
@@ -26,12 +32,6 @@ describe('finds', () => {
     expect(kinds(`the secret is "${RANDOM}"`)).toEqual(['high-entropy'])
     expect(kinds(`the secret is "${RANDOM}"`, false)).toEqual([])
   })
-})
-
-test('extra header names from the option', () => {
-  const text = "-H 'x-acme-token: Zt5Kq9Lm-Wx2Rv7Np4-Hc8Jd3Gf6Ys1Bu0Ea'"
-  expect(kinds(text, false)).toEqual([])
-  expect(detect(text, { entropy: false, headers: ['x-acme-token'] }).map(f => f.kind)).toEqual(['header-secret'])
 })
 
 describe('leaves alone', () => {
@@ -46,6 +46,18 @@ describe('leaves alone', () => {
       'CreateIntegrationCommandValidatorTests',
       '/var/folders/x1/abcd1234efgh5678ijkl90mn0000gn/T/Screenshot.png',
       "-H 'x-api-key: $API_KEY'",
+      'sortKey: createdAtTimestamp',
+      'PublicKeyToken=b77a5c561934e089',
+      'UnauthorizedLogWindow = TimeSpan.FromMinutes(5)',
+      'HashKey = RandomNumberGenerator.GetBytes(32)',
+      "key: '/Users/someone/projects/app/src/index.ts'",
+      'tokenExpiresAt: 2026-10-14T13:35:06.207Z',
+      'apiSecret: __ENV.API_SECRET_V2',
+      'secret: ${CI_DEPLOY_TOKEN_2}',
+      'password: ****redacted0h',
+      'ThrottleKey: "tenant.upload:42:device7"',
+      'const token = await getAccessToken(scope)',
+      '"publicKeyId": "11111111-2222-4333-8444-555555555555"',
       'Authorization: Bearer <token>',
       'Password = AppRolePassword',
       'Password=******',

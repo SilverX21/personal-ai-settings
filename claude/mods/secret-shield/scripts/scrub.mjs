@@ -6,7 +6,6 @@
 //
 // Scans ~/.claude/history.jsonl, ~/.claude/projects/**/*.jsonl and ~/.claude/paste-cache/*.
 // Skips files changed in the last 5 minutes (live sessions are still writing them).
-// Extra header names come from settings.json -> pluginConfigs["secret-shield…"].options.extraHeaders.
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -15,14 +14,6 @@ import { detect, mask, redact } from '../hooks/logic.ts'
 const CLAUDE = process.env.CLAUDE_CONFIG_DIR ?? path.join(process.env.HOME, '.claude')
 const APPLY = process.argv.includes('--apply')
 const LIVE_MS = 5 * 60_000
-const HEADERS = (() => {
-  try {
-    const configs = JSON.parse(fs.readFileSync(path.join(CLAUDE, 'settings.json'), 'utf8')).pluginConfigs ?? {}
-    return Object.entries(configs).find(([k]) => k.split('@')[0] === 'secret-shield')?.[1]?.options?.extraHeaders ?? []
-  } catch {
-    return []
-  }
-})()
 // Fields that hold ids, signatures or base64 media: never secrets, often high-entropy.
 const SKIP_KEYS = new Set(['signature', 'data', 'uuid', 'parentUuid', 'leafUuid', 'sessionId', 'requestId', 'id', 'tool_use_id', 'promptId', 'messageId'])
 
@@ -54,7 +45,7 @@ function isTyped(file, line) {
 function scrubValue(value, hits, entropy, key = '') {
   if (typeof value === 'string') {
     if (SKIP_KEYS.has(key)) return value
-    const found = detect(value, { entropy, headers: HEADERS })
+    const found = detect(value, { entropy })
     if (found.length === 0) return value
     hits.push(...found)
     return redact(value, found)
@@ -70,7 +61,7 @@ function scrubFile(file) {
   const text = fs.readFileSync(file, 'utf8')
   const hits = []
   if (!file.endsWith('.jsonl')) {
-    const found = detect(text, { entropy: true, headers: HEADERS })
+    const found = detect(text, { entropy: true })
     return { hits: found, next: found.length ? redact(text, found) : text }
   }
   const lines = text.split('\n').map(line => {
