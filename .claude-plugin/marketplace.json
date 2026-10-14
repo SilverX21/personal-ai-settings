@@ -20,6 +20,10 @@
     {
       "name": "ship-band",
       "source": "./claude/mods/ship-band"
+    },
+    {
+      "name": "ports-manager",
+      "source": "./claude/mods/ports-manager"
     }
   ]
 }
