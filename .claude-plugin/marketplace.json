@@ -24,6 +24,10 @@
     {
       "name": "ports-manager",
       "source": "./claude/mods/ports-manager"
+    },
+    {
+      "name": "notifier",
+      "source": "./claude/mods/notifier"
     }
   ]
 }

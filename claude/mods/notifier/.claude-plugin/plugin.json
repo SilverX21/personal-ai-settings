@@ -1,0 +1,17 @@
+{
+  "name": "notifier",
+  "version": "0.1.0",
+  "description": "Native notification when a long turn is done, a background agent or task finishes, or a background test run ends (with its pass/fail counts).",
+  "author": {
+    "name": "Nuno Araujo"
+  },
+  "userConfig": {
+    "minSeconds": {
+      "type": "number",
+      "title": "Shortest turn to notify about (seconds)",
+      "description": "A finished turn only raises a notification when it took at least this long.",
+      "required": false,
+      "default": 120
+    }
+  }
+}
