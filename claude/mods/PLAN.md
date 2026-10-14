@@ -260,7 +260,7 @@ Opus 5.5 · ctx 47% ▓▓▓▓▓░░░░░ · cache Warm 55m   ⚠ time 
 
 | Step | Marked done when |
 |---|---|
-| WI | `/azure-wi` used, or branch contains a 5-digit id |
+| WI | `/azure-wi` used, or the branch names the item: a 5-digit id (Azure DevOps) or a leading/`#` number (GitHub issues). Hidden when the repo's source is "none" |
 | Plan | `ExitPlanMode`, `Skill plan`, or a write to `docs/plans/*.md` |
 | Impl | `Edit` / `Write` on source files |
 | Tests | a test command exits 0 |
@@ -268,12 +268,14 @@ Opus 5.5 · ctx 47% ▓▓▓▓▓░░░░░ · cache Warm 55m   ⚠ time 
 | Security | `Skill security-review` completes |
 | Docs | `Skill document-feature` completes |
 | Commit | `git commit` exits 0 |
-| PR | `Skill prepare-pr` or `az repos pr create` succeeds |
+| PR | `az repos pr create` succeeds. `Skill prepare-pr` only records that the PR is prepared (not a band step), so Next moves on to "push and create the PR" |
 | Merged | "Mark merged" button, or `az repos pr show` status `completed` |
 
-**Honesty rule:** an `Edit` / `Write` after Review or Security marks them **stale** (●→⟳) until re-run.
+**Honesty rule:** an `Edit` / `Write` after Review or Security marks them **stale** (●→⟳) until re-run. Only those two can go stale: a skill that started earlier in the same turn and was edited over ends stale if it is Review or Security, and done otherwise (Plan, Docs and prepare-pr are not invalidated by code edits).
 
-**[Next] button:** fills the prompt with the next step's canonical text (`/code-review`, `/security-review`, `/document-feature`, `commit`, `/prepare-pr`, `push and create the PR`).
+**[Next] button:** fills the prompt with the current step's canonical text (`/code-review`, `/security-review`, `/document-feature`, `commit`, `/prepare-pr`, then `push and create the PR` once `/prepare-pr` has run). WI, Plan, Impl and Tests have texts too. A "Mark merged" button appears once the PR is open.
+
+**Work-item source (added 2026-10-14):** asked once per repo (Azure DevOps, GitHub issues, nowhere) and kept in `$.store`, not in `userConfig`, because it differs per repo. Until answered the band behaves as Azure DevOps. `/ship-band source [azure|github|none]` changes it; `/ship-band` prints the line; `reset`, `off` and `on` also work. PR and merge detection use `az repos` only, so with GitHub the PR step is closed by hand for now.
 
 **Tests:** step transitions from a recorded event sequence; stale-after-edit; per-branch isolation.
 
@@ -365,6 +367,8 @@ Each phase ends with: validate + type-check + tests green + manual check + short
 **Phase 1 — done 2026-10-14.** session-meter (8 tests) and test-guard in observe mode (5 tests, 142 real-command fixtures) validated, type-checked, checked live. Installed from this repo as `<mod>@nuno-mods` (folder marketplace, D25); model + context removed from `~/.claude/statusline-command.sh` (D21). Still to see live: the handoff button and the refill after `/clear`. test-guard ask mode is due after a week of `/test-guard log` review (≈ 2026-10-21).
 
 **Phase 2 — secret-shield done 2026-10-14.** secret-shield (12 tests) validated, type-checked, loaded live: asks Redact & send / Send anyway / Cancel on prompts with a secret, and Redact & write / Write anyway / Cancel on `Write`/`Edit` of a secret into a git-tracked file; fails open. High-entropy detection runs on typed text only. No per-project config: any field named like a secret (`*key`, `*secret`, `*token`, `*password`, `*pwd`, `*credential(s)`, `*auth(orization)`, `sig`/`*signature`) in a header, JSON/YAML, env var or URL parameter is checked; its value must look like a credential (letters + digits, not a GUID, name, placeholder, code, path, URL or date). Tuned on the local logs: 423 hits → 31, all real or fixture keys. History scrub (`scripts/scrub.mjs`, dry run by default) redacted 64 hits of 16 values in 17 files; 0 left on re-run; backups deleted. Test fixtures are fake values. Still to do: scrub this session's transcript once it is closed, rotate any key still live, test-guard ask mode (≈ 2026-10-21).
+
+**Phase 3 — ship-band built 2026-10-14** (azure-wi is work-specific, so it lives in `~/.claude/local-mods` on the company PC and is not in this repo). 16 tests, validated, type-checked, and fixed after a review (per-session values live in `$.state`; only Review and Security go stale; the saved-branch cap no longer evicts the branch in use; the PR step now asks for the push after `/prepare-pr`). Where the work items live is asked once per repo (Azure DevOps, GitHub issues, or nowhere) and kept in `$.store`: it decides how a branch name gives the item id, what the WI step's Next button says, and whether the WI step is shown; `/ship-band source [azure|github|none]` changes it. Steps per `repo:branch` in `$.store`. A skill counts as done when the turn that ran it ends normally, or stale if a source edit came after it in that turn. `/ship-band` prints the line; `reset`, `off` and `on` also work. Detection of tests is a command pattern plus a non-error result. Not yet seen live: the band itself and the Next button.
 
 ## 6. Open questions
 

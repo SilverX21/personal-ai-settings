@@ -16,6 +16,10 @@
     {
       "name": "secret-shield",
       "source": "./claude/mods/secret-shield"
+    },
+    {
+      "name": "ship-band",
+      "source": "./claude/mods/ship-band"
     }
   ]
 }
