@@ -12,7 +12,7 @@ editing a file here changes the live setup, and git sees every change.
 
 ```
 rules/          tool-agnostic kernel — communication, principles, workflow, review, handoff
-claude/         Claude Code adapter extras shared across presets (model policy)
+claude/         Claude Code adapter extras (model policy) + mods/ (my Claude Code mods)
 cursor/         Cursor adapter extras shared across presets (pointer today)
 copilot/        Copilot adapter extras shared across presets (pointer today)
 skills/         skills I wrote or own outright (dotnet-master, neon-postgres, plan-master, travel-partner, ...)

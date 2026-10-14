@@ -1,0 +1,17 @@
+{
+  "name": "nuno-mods",
+  "description": "Nuno's Claude Code mods (function-hook plugins), read straight from this repo.",
+  "owner": {
+    "name": "Nuno Araujo"
+  },
+  "plugins": [
+    {
+      "name": "session-meter",
+      "source": "./claude/mods/session-meter"
+    },
+    {
+      "name": "test-guard",
+      "source": "./claude/mods/test-guard"
+    }
+  ]
+}

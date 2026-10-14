@@ -1,0 +1,7 @@
+{
+  "name": "session-meter",
+  "version": "0.1.0",
+  "description": "Band above the prompt: model, context fill, prompt-cache warmth and countdown, and a one-click handoff at 45% context.",
+  "author": { "name": "Nuno Araujo" },
+  "types": "./types/index.d.ts"
+}

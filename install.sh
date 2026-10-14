@@ -52,6 +52,29 @@ else
   warn "not a git checkout, skipped core.hooksPath"
 fi
 
+echo "==> Installing my mods (this repo is a folder marketplace)"
+# A folder marketplace is read in place: git pull + /reload-plugins updates them, no reinstall.
+# Work-specific mod options live in ~/.claude/settings.json -> pluginConfigs, never in this repo.
+if command -v claude >/dev/null 2>&1; then
+  if claude plugin marketplace list 2>/dev/null | grep -q '❯ nuno-mods$'; then
+    info "have     marketplace nuno-mods"
+  else
+    claude plugin marketplace add "$REPO" >/dev/null && info "added    marketplace nuno-mods"
+  fi
+  python3 -c '
+import json,sys
+for p in json.load(open(sys.argv[1]))["plugins"]: print(p["name"])
+' "$REPO/.claude-plugin/marketplace.json" | while read -r mod; do
+    if claude plugin install "$mod@nuno-mods" >/dev/null 2>&1; then
+      info "ok       $mod@nuno-mods"
+    else
+      warn "install failed: $mod@nuno-mods (try: claude plugin install $mod@nuno-mods)"
+    fi
+  done
+else
+  warn "claude CLI not found, skipped mods"
+fi
+
 echo "==> Restoring skill lock"
 mkdir -p "$AGENTS"
 if [ -e "$AGENTS/.skill-lock.json" ] && \
