@@ -26,20 +26,21 @@ export function minMs(minSeconds: unknown): number {
 
 export type TaskNote = { id?: string; status?: string; summary?: string; outputFile?: string }
 
-// The engine words a background task's notification as <task-id>, <status>, <summary> and <output-file> tags.
+// The engine words a background task's notification as <task-id>, <tool-use-id>, <output-file>, <status> and <summary> tags, in that order, then may add the agent's report.
+// The first match of each tag wins, so a tag that a summary or a report happens to contain comes later and is ignored.
 export function parseTaskNote(text: string): TaskNote {
   const tag = (name: string) => new RegExp(`<${name}>\\s*([\\s\\S]*?)\\s*</${name}>`).exec(text)?.[1]
   return { id: tag('task-id'), status: tag('status'), summary: tag('summary'), outputFile: tag('output-file') }
 }
 
-// The path comes from text a task or agent can influence, so it must look like this session's own task output: an absolute path ending <session id>/tasks/<task id>.output, with no . or .. segments.
-// This is the shape half of the guard; the notifier also checks with fs.stat that it is a plain file whose real path is this very path.
-export function isTaskOutputPath(path: string, sessionId: string): boolean {
-  if (!path.startsWith('/') || !/^[\w-]+$/.test(sessionId)) return false
+// A task's output file is `<some folder>/tasks/<task id>.output`, named for the very task the notification is about. The folder above `tasks` is not the session id (a cleared session keeps the folder of the one before it), so it is not checked.
+// Shape half of the guard: absolute, no empty, . or .. segments. The notifier also checks with fs.stat that it is a plain file whose real path is this very path.
+export function isTaskOutputPath(path: string, taskId: string): boolean {
+  if (!path.startsWith('/') || !/^[\w-]+$/.test(taskId)) return false
   const parts = path.slice(1).split('/')
-  if (parts.length < 4 || parts.some(p => p === '' || p === '.' || p === '..')) return false
-  const [session, dir, file] = parts.slice(-3)
-  return session === sessionId && dir === 'tasks' && /^[\w-]+\.output$/.test(file!)
+  if (parts.length < 3 || parts.some(p => p === '' || p === '.' || p === '..')) return false
+  const [dir, file] = parts.slice(-2)
+  return dir === 'tasks' && file === `${taskId}.output`
 }
 
 export type TestCounts = { passed: number; failed: number }

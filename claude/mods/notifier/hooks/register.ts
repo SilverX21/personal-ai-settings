@@ -35,13 +35,13 @@ async function countsFor($: EngineInterface, note: TaskNote): Promise<TestCounts
   if (note.status !== 'completed' || !note.id || !note.outputFile) return undefined
   const agents = await $.agent.list().catch(() => undefined)
   if (!agents || agents.some(a => a.id === note.id)) return undefined
-  if (!(await isOwnOutputFile($, note.outputFile))) return undefined
+  if (!(await isOwnOutputFile($, note.outputFile, note.id))) return undefined
   return parseTestCounts(await $.fs.read(note.outputFile))
 }
 
-// A plain file, not a link, whose real path is the path it was named by (so no link in any folder above it), of a sane size, named for this session's task folder.
-async function isOwnOutputFile($: EngineInterface, path: string): Promise<boolean> {
-  if (!isTaskOutputPath(path, await $.session.id())) return false
+// A plain file, not a link, whose real path is the path it was named by (so no link in any folder above it), of a sane size, in a tasks folder and named for this task.
+async function isOwnOutputFile($: EngineInterface, path: string, taskId: string): Promise<boolean> {
+  if (!isTaskOutputPath(path, taskId)) return false
   const st = await $.fs.stat(path, { resolve: true }).catch(() => undefined)
   return st !== undefined && st.kind === 'file' && !st.isLink && st.realPath === path && st.size <= MAX_OUTPUT_BYTES
 }
