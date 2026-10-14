@@ -101,19 +101,24 @@ export const register: Register = on => {
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    const below = await next(e)
     const v = await read($, view)
-    if (e.props.hasSurvey || !v || (await read($, isHidden))) return next(e)
+    if (e.props.hasSurvey || !v || (await read($, isHidden))) return below
 
     const { Box, Button, Text } = $.ui.resolve(e)
     const cur = current(v.steps, v.source)
     const text = cur ? nextText(cur, v.source, v.steps) : undefined
     const hasPr = v.steps.PR === 'done' && v.steps.Merged !== 'done'
 
+    // Keep what the hooks below drew (other bands) instead of replacing it.
     return (
-      <Box>
+      <Box flexDirection="column">
+        {below}
+        <Box>
         <Text dimColor>{formatLine(v.branch, v.steps, v.source)} </Text>
         {text ? <Button key="next" label={`Next: ${text.trim()}`} onPress={() => $.prompt.fill({ text })} /> : null}
         {hasPr ? <Button key="merged" label="Mark merged" onPress={() => record($, { kind: 'merged' })} /> : null}
+        </Box>
       </Box>
     )
   })

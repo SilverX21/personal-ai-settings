@@ -133,3 +133,21 @@ test('reset clears the branch and off/on switch the band', async ($, on) => {
   expect((await cmd($, 'off')).text).toBe('ship-band is off.')
   expect((await cmd($, 'on')).text).toBe('ship-band is on.')
 })
+
+test('the band keeps what the hooks below it drew', async ($, on) => {
+  world(on, { name: 'feat/12345-export' })
+  on('ui.render', ($: any, e: any) => {
+    const { Text } = $.ui.resolve(e)
+    return Text({ children: 'other band' })
+  })
+  await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })
+  const ui = await $.ui.mount({
+    plugin: 'ship-band',
+    surface: 'terminal',
+    component: 'AbovePrompt',
+    props: { hasSurvey: false, isWorking: false, maxRows: 5, bodyColumns: 120, scroll: { offset: 0, bodyRows: 5 }, view: {} },
+  })
+  expect(await ui.find({ type: 'Text', text: /other band/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /#12345 feat\/12345-export/ })).toBeDefined()
+  await ui.unmount()
+})

@@ -18,6 +18,11 @@ test('band shows model, context and cache, and offers a handoff at 45%', async (
   }))
   on('process.run', () => ({ value: { exitCode: 0, stdout: '"ephemeral_1h_input_tokens":1200', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }))
   on('prompt.read', () => ({ value: { text: '', cursor: 0 } }))
+  // Stands in for another plugin's band: ours must keep it, not replace it.
+  on('ui.render', ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>other band</Text>
+  })
   on('turn.complete', ($, e) => ({ text: e.reason === 'answer' ? e.answer : '' }))
 
   for (let i = 0; i < 2; i++) {
@@ -25,6 +30,7 @@ test('band shows model, context and cache, and offers a handoff at 45%', async (
   }
 
   const ui = await $.ui.mount({ plugin: 'session-meter', surface: 'terminal', ...BAND })
+  expect(await ui.find({ type: 'Text', text: /other band/ })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /Opus 5\.5/ })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /ctx 47%/ })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /cache Warm 60m/ })).toBeDefined()

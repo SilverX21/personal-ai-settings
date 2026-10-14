@@ -72,8 +72,9 @@ export const register: Register = on => {
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    const below = await next(e)
     const m = await read($, meter)
-    if (e.props.hasSurvey || m.model === '') return next(e)
+    if (e.props.hasSurvey || m.model === '') return below
     const { Box, Button, Text } = $.ui.resolve(e)
 
     const remaining = e.props.isWorking || m.lastTouch === null ? m.ttlMin * 60_000 : m.ttlMin * 60_000 - (m.now - m.lastTouch)
@@ -82,8 +83,11 @@ export const register: Register = on => {
     const isWarn = percent !== null && percent >= WARN_PERCENT
     const isColdAndBig = state === 'Cold' && percent !== null && percent >= COLD_TIP_PERCENT
 
+    // Keep what the hooks below drew (other bands) instead of replacing it.
     return (
-      <Box flexDirection="row" flexWrap="wrap">
+      <Box flexDirection="column">
+        {below}
+        <Box flexDirection="row" flexWrap="wrap">
         <Text color="claude">{prettyModel(m.model)}</Text>
         <Text dimColor> · </Text>
         {percent === null ? (
@@ -110,6 +114,7 @@ export const register: Register = on => {
         )}
         {m.handoff === 'running' && <Text dimColor>   preparing handoff…</Text>}
         {m.handoff === 'ready' && <Text color="success">   handoff copied ✓ · /clear to start fresh</Text>}
+        </Box>
       </Box>
     )
   })
