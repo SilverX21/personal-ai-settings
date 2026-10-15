@@ -1,17 +1,25 @@
 import { expect, mock, test } from 'claude-code/testing'
 
 // Drives the hooks with real-looking events and reads the result through `/ship-band`.
-function world(on: any, branch: { name: string }) {
-  mock.store(on)
+function world(on: any, branch: { name: string }, extra: { store?: Record<string, unknown>; surface?: string | null } = {}) {
+  // An in-memory store the test can read back (mock.store cannot be read from the test).
+  const kv = new Map<string, unknown>(Object.entries(extra.store ?? {}))
+  on('store.get', (_$: unknown, e: { key: string }) => ({ value: kv.get(e.key) }))
+  on('store.set', (_$: unknown, e: { key: string; value: unknown }) => {
+    kv.set(e.key, e.value)
+    return { value: undefined }
+  })
   on('session.repo', () => ({ value: { root: '/repo', remote: null, internal: false, name: null } }))
   on('process.run', (_$: unknown, e: { argv: readonly string[] }) => ({
     value: { exitCode: 0, stdout: e.argv[0] === 'git' ? `${branch.name}\n` : '', stderr: '' },
   }))
+  on('session.surface', () => ({ value: extra.surface === undefined ? 'terminal' : extra.surface }))
   on('session.start', () => ({ cwd: '/repo' }))
   on('turn.complete', () => ({ text: '' }))
   on('command.register', () => ({ value: undefined }))
   on('tool.call', { tool: ['Edit', 'Write', 'Skill', 'ExitPlanMode'] }, () => ({ result: 'ok' }))
   on('tool.call', { tool: 'Bash' }, (_$: unknown, e: { command: string }) => ({ result: 'ok', text: e.command }))
+  return kv
 }
 
 const status = ($: any) =>
@@ -162,4 +170,49 @@ test('a subagent turn ending does not count the main turn skill as done', async 
 
   await turnEnd($)
   expect((await status($)).text).toContain('Review ✓')
+})
+
+// `$.ui.ask` is a `tool.call` of AskUserQuestion; denying it stands for the person dismissing the dialog. The mock counts the asks.
+const dismissing = (on: any) => {
+  const asks: unknown[] = []
+  on('tool.call', { tool: 'AskUserQuestion' }, (_$: unknown, e: unknown) => {
+    asks.push(e)
+    return { deny: 'dismissed' }
+  })
+  return asks
+}
+
+test('a dismissed work-items question is remembered for the repo', async ($, on) => {
+  const kv = world(on, { name: 'feat/one' })
+  const clock = mock.clock(on)
+  const asks = dismissing(on)
+  await start($)
+  await clock.settle()
+  expect(asks).toHaveLength(1)
+  expect(kv.get('dismissed')).toEqual({ '/repo': true })
+})
+
+test('a repo dismissed in an earlier session is not asked again', async ($, on) => {
+  world(on, { name: 'feat/one' }, { store: { dismissed: { '/repo': true } } })
+  const asks = dismissing(on)
+  await start($)
+  expect(asks).toHaveLength(0)
+  expect((await status($)).text).toContain('feat/one')
+})
+
+test('a dismissal in another repo does not silence this one', async ($, on) => {
+  world(on, { name: 'feat/one' }, { store: { dismissed: { '/elsewhere': true } } })
+  const asks = dismissing(on)
+  await start($)
+  expect(asks).toHaveLength(1)
+})
+
+test('a run with no surface (nobody asked) remembers nothing', async ($, on) => {
+  const kv = world(on, { name: 'feat/one' }, { surface: null })
+  const clock = mock.clock(on)
+  const asks = dismissing(on)
+  await start($)
+  await clock.settle()
+  expect(asks).toHaveLength(1)
+  expect(kv.has('dismissed')).toBe(false)
 })

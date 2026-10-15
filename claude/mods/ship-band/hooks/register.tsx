@@ -8,6 +8,7 @@ import type { Signal, Source, Steps } from './logic'
 const view = atom({ plugin: 'ship-band', key: 'view' } as const, null)
 const isHidden = atom({ plugin: 'ship-band', key: 'isHidden' } as const, false)
 const STORE_KEY = 'branches'
+const DISMISSED_KEY = 'dismissed'
 const STORE_CAP = 50
 const SOURCE_KEY = 'sources'
 const SOURCE_LABELS: Record<string, Source> = {
@@ -167,8 +168,21 @@ async function askSource($: EngineInterface, root: string) {
     await setSource($, root, source)
     await refresh($)
   } catch {
-    // Dismissing the question (or no one to ask) is a valid answer: leave the source unset and keep the band working.
+    // Dismissing the question is a valid answer: leave the source unset, keep the band working, and remember it for this repo.
+    // A -p run has no surface and no one was asked, so nothing is remembered.
+    // Bookkeeping must not throw out of a dialog nobody awaits.
+    await rememberDismissal($, root).catch(() => undefined)
   }
+}
+
+async function isDismissed($: EngineInterface, root: string): Promise<boolean> {
+  return ((await $.store.get(DISMISSED_KEY)) as Record<string, true> | undefined)?.[root] === true
+}
+
+async function rememberDismissal($: EngineInterface, root: string) {
+  if ((await $.session.surface()) === null) return
+  const all = ((await $.store.get(DISMISSED_KEY)) as Record<string, true> | undefined) ?? {}
+  await $.store.set(DISMISSED_KEY, { ...all, [root]: true })
 }
 
 async function show($: EngineInterface, at: Where, steps: Steps) {
@@ -183,7 +197,7 @@ async function refresh($: EngineInterface) {
   const steps = apply((await load($))[at.key] ?? {}, { kind: 'branch', branch: at.branch, source: source ?? 'azure' })
   await save($, at.key, steps)
   await show($, at, steps)
-  if (!source && !(await read($, isAsked))) {
+  if (!source && !(await read($, isAsked)) && !(await isDismissed($, at.root))) {
     await update($, isAsked, () => true)
     // Not awaited: the dialog waits for the person, and session start must not.
     void askSource($, at.root)
