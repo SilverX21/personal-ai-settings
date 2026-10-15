@@ -88,8 +88,8 @@ Source: `~/.claude/history.jsonl` (1,649 prompts, 10 Jul – 14 Oct 2026), 86 ma
 ```
 
 **Where they live**
-- Development (hot reload): `~/.claude/dev-mods/<session-id>/<mod-name>/`.
-- Source of truth (D20): `personal-ai-settings/claude/mods/<mod-name>/`, so `install.sh` can sync them to the company PC. Copy back from `dev-mods` when a mod is done.
+- Development (hot reload): `~/.claude/dev-mods/<session-id>/<mod-name>/` was removed on 2026-10-15 (only empty session folders remained). Work in the source folder below.
+- Source of truth (D20): `personal-ai-settings/claude/mods/<mod-name>/`, so `install.sh` can sync them to the company PC.
 
 **Every mod, before "done"**
 1. `claude plugin validate <mod folder>` — clean.
