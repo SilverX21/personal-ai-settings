@@ -7,6 +7,8 @@ import type { Thresholds } from './logic'
 
 const DEFAULT_TTL = 60
 const TICK_MS = 15_000
+// One slot for the whole machine: /clear can start the new session in another folder.
+const HANDOFF_KEY = 'handoff'
 const REFILL_WINDOW_MS = 30 * 60_000
 
 const INITIAL: Meter = {
@@ -48,9 +50,8 @@ export const register: Register = (on, options) => {
   // A /clear fires no session.start for a mod: session.end with reason 'clear' is the only sign of one.
   on('session.end', async ($, e, next) => {
     if (e.reason === 'clear') {
-      const key = `handoff:${await $.session.cwd()}`
-      const pending = (await $.store.get(key)) as PendingHandoff | undefined
-      if (pending && pending.fromSession === e.sessionId) await $.store.set(key, { ...pending, isCleared: true })
+      const pending = (await $.store.get(HANDOFF_KEY)) as PendingHandoff | undefined
+      if (pending && pending.fromSession === e.sessionId) await $.store.set(HANDOFF_KEY, { ...pending, isCleared: true })
     }
     return next(e)
   })
@@ -195,19 +196,18 @@ async function finishHandoff($: EngineInterface): Promise<void> {
   const text = await $.fs.read(handoffPath)
   const copied = await $.ui.copy({ text })
   const pending: PendingHandoff = { text, at: await $.clock.now(), fromSession: await $.session.id(), isUsed: false }
-  await $.store.set(`handoff:${await $.session.cwd()}`, pending)
+  await $.store.set(HANDOFF_KEY, pending)
   await update($, meter, (m): Meter => ({ ...m, handoff: 'ready' }))
   $.ui.toast(copied.isCopied ? 'Handoff copied. Run /clear: the prompt will be pre-filled.' : `Handoff saved to ${handoffPath}.`)
 }
 
-// After /clear (new session id, same cwd), put the saved handoff in an empty prompt box.
+// After /clear (new session id, any cwd), put the saved handoff in an empty prompt box.
 async function refillHandoff($: EngineInterface, sessionId: string, now: number): Promise<void> {
-  const key = `handoff:${await $.session.cwd()}`
-  const pending = (await $.store.get(key)) as PendingHandoff | undefined
+  const pending = (await $.store.get(HANDOFF_KEY)) as PendingHandoff | undefined
   if (!pending || !pending.isCleared || pending.isUsed || pending.fromSession === sessionId || now - pending.at > REFILL_WINDOW_MS) return
   if ((await $.prompt.read()).text !== '') return
   const { isFilled } = await $.prompt.fill({ text: pending.text, mode: 'replace' })
   if (!isFilled) return
-  await $.store.set(key, { ...pending, isUsed: true })
+  await $.store.set(HANDOFF_KEY, { ...pending, isUsed: true })
   $.ui.toast('Handoff pre-filled: press Enter to continue.')
 }

@@ -20,8 +20,8 @@ function answerSession(on: On, cwd: string, fills: string[]) {
 
 const pending = { text: 'HANDOFF', at: 0, fromSession: 'old-session', isUsed: false, isCleared: true }
 
-test('a saved handoff fills the empty prompt in a new session in the same folder, once', async ($, on) => {
-  mock.store(on, { 'handoff:/repo': pending })
+test('a saved handoff fills the empty prompt in a new session, once', async ($, on) => {
+  mock.store(on, { handoff: pending })
   const fills: string[] = []
   answerSession(on, '/repo', fills)
   for (const turnId of ['a', 'b']) {
@@ -30,16 +30,16 @@ test('a saved handoff fills the empty prompt in a new session in the same folder
   expect(fills).toEqual(['HANDOFF'])
 })
 
-test('a handoff saved in another folder is not used', async ($, on) => {
-  mock.store(on, { 'handoff:/other': pending })
+test('a handoff is refilled even when the new session starts in another folder', async ($, on) => {
+  mock.store(on, { handoff: pending })
   const fills: string[] = []
-  answerSession(on, '/repo', fills)
+  answerSession(on, '/elsewhere', fills)
   await $.turn.complete({ reason: 'answer', answer: '', turnId: 'a', durationMs: 1, isAborted: false })
-  expect(fills).toEqual([])
+  expect(fills).toEqual(['HANDOFF'])
 })
 
 test('a handoff is not refilled unless the old session ended with /clear', async ($, on) => {
-  mock.store(on, { 'handoff:/repo': { ...pending, isCleared: undefined } })
+  mock.store(on, { handoff: { ...pending, isCleared: undefined } })
   const fills: string[] = []
   answerSession(on, '/repo', fills)
   await $.turn.complete({ reason: 'answer', answer: '', turnId: 'a', durationMs: 1, isAborted: false })
@@ -47,7 +47,7 @@ test('a handoff is not refilled unless the old session ended with /clear', async
 })
 
 test('only a /clear of the session that made the handoff arms the refill', async ($, on) => {
-  mock.store(on, { 'handoff:/repo': { ...pending, isCleared: undefined } })
+  mock.store(on, { handoff: { ...pending, isCleared: undefined } })
   const fills: string[] = []
   answerSession(on, '/repo', fills)
   await $.session.end({ reason: 'resume', sessionId: 'old-session', resume: { id: 'old-session' } })

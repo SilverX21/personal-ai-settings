@@ -134,17 +134,19 @@ Opus 5.5 · ctx 47% ▓▓▓▓▓░░░░░ · cache Warm 55m   ⚠ time 
 - **[Prepare handoff] button:**
   1. Submits `/handoff <purpose>` (purpose = current branch + active WI if known), adding context: save to `$TMPDIR/claude-handoff-<session-id>.md`.
   2. On that turn's `turn.complete`, reads the file and `$.ui.copy`s it; toast "Handoff copied".
-  3. Stores the text in `$.store` keyed by cwd.
-  4. On the next `session.start` with source `clear` in the same cwd (within 30 min), fills the prompt input with the handoff (`prompt.fill`) so you only press Enter.
+  3. Stores the text in `$.store` under one fixed key, `handoff`, with the time, the id of the session that made it, and the flags `isCleared` and `isUsed`. The key does not include the folder, because a `/clear` can start the new session in another one.
+  4. A mod gets no `source` on `session.start`, and no `session.start` fires after `/clear`. The only sign of a clear is `session.end` with reason `clear`. That hook marks the stored handoff `isCleared`, and only when the ending session is the one that made it.
+  5. On the next refresh in the new session (`session.start`, a tick or `turn.complete`), if the handoff is marked, unused, from another session and under 30 minutes old, and the prompt box is empty, it fills the box (`prompt.fill`) and toasts "Handoff pre-filled: press Enter to continue." It then sets `isUsed`, so the fill happens once.
+  - Limit: the store has one slot. A second handoff replaces the first, so two projects running in parallel can cross over.
 
-**Config:** `ttlMinutes` (60), `warnPercent` (45), `overageTtlMinutes` (5).
+**Config (`userConfig`):** `yellowPercent` (30), `warnPercent` (45), `redPercent` (60), `coldTipPercent` (40). A bad value falls back to its default. The TTL is not an option: it is detected, with `/session-meter ttl` as the manual override.
 
 **Edge cases**
 - Overage detection (D24): bucket of the last cache write decides the TTL; `rateLimits` ≥100% shows "overage likely" before the first 5m write appears. Manual override `/session-meter ttl 5|60` stays as a fallback.
 - Model switched mid-session with `/model`: next tick shows it.
 - `-p` / SDK runs: band not drawn; nothing breaks.
 
-**Tests:** state mapping for 60 and 5 min TTL (boundaries 48/36/24/12/0); threshold crossing fires the toast once; handoff text stored and re-filled only for same cwd.
+**Tests:** state mapping for 60 and 5 min TTL (boundaries 48/36/24/12/0); threshold crossing fires the toast once; the handoff refills once, only after a `/clear` of the session that made it, and also when the new session starts in a different folder.
 
 **Acceptance:** band visible in every session; countdown moves while idle; 45% shows the button; button → clipboard has the handoff; after `/clear` the prompt is pre-filled.
 

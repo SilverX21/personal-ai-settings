@@ -36,14 +36,17 @@ After you edit the mod, run `/reload-plugins`.
 
 ## Handoff
 
-The button (or `/session-meter handoff`) runs your `/handoff` command with the current branch and a path under `$TMPDIR`. You need a `/handoff` command or skill for this to work. When the file is written, the mod copies it to the clipboard and saves it for this folder.
+The button (or `/session-meter handoff`) runs your `/handoff` command with the current branch and a path under `$TMPDIR`. You need a `/handoff` command or skill for this to work. When the file is written, the mod copies it to the clipboard and saves it in one slot (not per folder).
 
 Then run `/clear`. If the prompt box is empty, the handoff text fills it, and you press Enter to continue. The fill happens only:
 
 - after a `/clear` of the session that made the handoff (a resumed or new session does not get it),
-- in the same folder,
 - within 30 minutes,
 - once.
+
+The folder does not matter: the new session may start in a different one. Because there is one slot, a second handoff replaces the first, so two projects running at once can swap handoffs.
+
+How it works: a mod gets no event for the new session after `/clear`, but it does see the old session end with the reason `clear`. That marks the saved handoff. The next time the band refreshes in the new session (at start, on a timer or after a turn), the mod fills the box, within about 15 seconds. If nothing happens, check that you typed nothing in the box and that you ran `/reload-plugins` after editing the mod.
 
 ## Options
 
