@@ -15,3 +15,10 @@ test('separators inside quotes do not split a command', () => {
 test('nx test with a path after -- says the path is ignored', () => {
   expect(classify('pnpm nx test web -- src/a.test.tsx')?.reason).toContain('ignores the path')
 })
+
+test('help and version flags run no tests, so they are never caught', () => {
+  for (const flag of ['--help', '-h', '--version']) {
+    expect(classify(`pnpm test:all ${flag}`)).toBeNull()
+  }
+  expect(classify('pnpm test:all --help && pnpm test:all')?.segment).toBe('pnpm test:all')
+})

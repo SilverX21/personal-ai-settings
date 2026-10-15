@@ -144,4 +144,8 @@ export const FIXTURES: ReadonlyArray<readonly ['suite' | 'push' | 'pass', string
   ["pass", "dotnet test tests/App.Tests --filter \"FullyQualifiedName~X\""],
   ["pass", "dotnet test App.slnx --filter \"FullyQualifiedName~X\""],
   ["pass", "pnpm exec playwright test web/a.spec.ts --workers=1"],
+  ["pass", "pnpm test:all --help"],
+  ["pass", "dotnet test -h"],
+  ["pass", "pnpm exec vitest --version"],
+  ["suite", "pnpm test:all --reporter=dot"],
 ]

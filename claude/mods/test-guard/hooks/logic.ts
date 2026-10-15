@@ -14,6 +14,9 @@ const VALUE_FLAGS: Record<string, readonly string[]> = {
 }
 const SCOPE_FLAGS = /^(?:-t|--test|--testNamePattern|--testFile|--filter|-g|--grep|--related)(?:=|$)/
 
+// Help and version output runs no tests.
+const INFO_FLAGS = new Set(['--help', '-h', '--version'])
+
 const SUITE_SCRIPTS = /^test(?::(?:all|web|api|libs|e2e)(?::\S*)?)?$/
 
 // Splits on && || ; | and newlines, but never inside quotes (grep -E "a|vitest" is one segment).
@@ -137,6 +140,7 @@ export function classify(command: string): Hit | null {
   for (const raw of segments(command)) {
     const segment = clean(raw)
     const tokens = tokenize(segment)
+    if (tokens.some(t => INFO_FLAGS.has(t))) continue
     if (tokens[0] === 'git' && tokens[1] === 'push') {
       const flags = tokens.slice(2)
       if (!flags.includes('--no-verify') && !flags.includes('--dry-run') && !flags.includes('-n')) {
