@@ -28,6 +28,10 @@
     {
       "name": "notifier",
       "source": "./claude/mods/notifier"
+    },
+    {
+      "name": "prompt-enhancer",
+      "source": "./claude/mods/prompt-enhancer"
     }
   ]
 }

@@ -69,6 +69,10 @@ Source: `~/.claude/history.jsonl` (1,649 prompts, 10 Jul – 14 Oct 2026), 86 ma
 | D24 | Cache TTL is detected, not assumed: each main-thread response's `usage.cache_creation` says which bucket the write went to (`ephemeral_1h_input_tokens` vs `ephemeral_5m_input_tokens`). Read it from the session transcript on `turn.complete`. Early warning: any `$.session.usage().rateLimits[].percentUsed >= 100` means included usage is spent, so overage (5 min) is likely. Baseline 2026-10-14: 17,348 cache writes in 3 months, all 1h, 0 in 5m. |
 | D25 | Mods ship as a **folder marketplace** in this repo: `.claude-plugin/marketplace.json` at the repo root, one entry per mod with `"source": "./claude/mods/<mod>"`. `install.sh` runs `claude plugin marketplace add <repo>` and `claude plugin install <mod>@nuno-mods` per mod. A folder marketplace is read from the folder itself, so `git pull` + `/reload-plugins` updates both machines with no reinstall; each mod can be enabled/disabled per machine with `/plugin`. |
 | D26 | This repo is **public** on GitHub. Mods and docs here hold no work-specific values (org URLs, project names, account IDs, hostnames). Those go in each machine's `~/.claude/settings.json` → `pluginConfigs.<mod>.options`, which is never committed. |
+| D27 | prompt-enhancer takes your workflow rules from a plugin option `rules`, default empty, set per machine. The template itself holds no workflow or project text. Rejected: hard-coding the rules (a public repo would carry one person's workflow). |
+| D28 | prompt-enhancer gate: mod on, text not starting with `/` or `!`, at least `minWords` words (default 25). The spec's "meta" test is dropped: it has no reliable definition, and the opt-in switch plus the length check cover the cases that matter. A `minWords` below 1 falls back to 25. |
+| D29 | prompt-enhancer keeps the first question (Improve prompt / Dismiss) so the model runs only on request. The improved text is shown in the body of the second question (Send improved / Edit / Send original), cut at 2000 characters in the dialog only. Edit drops the submit and fills the full text back into the box. |
+| D30 | prompt-enhancer fails open: a model error, a timeout (20 s, set on the call itself) or an empty reply sends the original prompt and shows a toast. The on/off switch is kept in `$.store`, so it lasts across sessions; it is off until `/enhance on`. |
 
 ## 3. Shared conventions
 
@@ -78,7 +82,7 @@ Source: `~/.claude/history.jsonl` (1,649 prompts, 10 Jul – 14 Oct 2026), 86 ma
 <mod-name>/
   .claude-plugin/plugin.json      { "name", "version": "0.1.0", "description", "types"? }
   hooks/hooks.json                { "modules": ["./register.tsx"] }
-  hooks/register.tsx              export const register: Register = (on, options) => { ... }
+  hooks/register.tsx              export const register: Register = (on, options) => { ... }   (.ts when the mod draws nothing)
   types/index.d.ts                only if the mod keeps values in $.state
   test/*.test.ts                  at least one behaviour test
 ```
@@ -95,7 +99,7 @@ Source: `~/.claude/history.jsonl` (1,649 prompts, 10 Jul – 14 Oct 2026), 86 ma
 
 **Rules**
 - No shared library between mods; each mod is self-contained (small duplication beats coupling).
-- Per-session values in `$.state`, cross-session values in `$.store` (declared in `types/index.d.ts`).
+- Per-session values in `$.state`, cross-session values in `$.store`. A `$.store` key needs no declaration: `$.store.get(key)` takes any string and returns `unknown`, so the mod casts or checks the value where it reads it. `types/index.d.ts` is only for `$.state` (`PluginState`).
 - Long-running shell work through `$.process.run` / `$.process.spawn`; never block a hook on a slow command without a timeout.
 - Config via plugin `userConfig` options, with sane defaults (org URL, thresholds, TTL).
 - Any destructive action (kill process, redact, rewrite command) is shown to the user first.
@@ -336,24 +340,27 @@ Opus 5.5 · ctx 47% ▓▓▓▓▓░░░░░ · cache Warm 55m   ⚠ time 
 
 **Goal:** turn a rough long prompt into a structured one, on request.
 
-**Gate:** skip if text starts with `/` or `!`, has <25 words, is meta, or the mod is off.
+**Gate:** the mod is on, the text does not start with `/` or `!`, and it has at least `minWords` words (default 25; `[Image #N]` tokens do not count). Only the user's own Enter counts: notifications, schedules and other plugins are never offered a rewrite (D28).
 
 **Flow**
-1. `prompt.submit` → `$.ui.ask("Improve this prompt?", ["Improve prompt", "Dismiss"])`. Dismiss sends the original.
-2. Improve → `$.model.complete` (Haiku 5.5) with the rewrite template.
-3. Show the improved text, then `$.ui.ask(…, ["Send improved", "Edit", "Send original"])`. Edit → cancel submit and `prompt.fill` the improved text.
+1. `prompt.submit` → `$.ui.ask("Improve this prompt?", ["Improve prompt", "Dismiss"])`. Dismiss, Esc or an error sends the original.
+2. Improve → `$.model.complete` (Haiku 5.5, 20 s limit on the call) with the rewrite template. An error, a timeout or an empty reply sends the original and shows a toast (D30).
+3. Show the improved text in the body of `$.ui.ask(…, ["Send improved", "Edit", "Send original"])`. Edit drops the submit and fills the box with the improved text (`prompt.fill`, deferred 300 ms as in secret-shield). A dismissed question sends the original (D29).
 
 **Rewrite template (system)**
-- Keep the user's intent, voice and language; don't add scope.
-- Structure: Goal · Context · Constraints · Acceptance criteria · Out of scope · Output format.
-- Add project rules when relevant: scoped tests only; code review → security review → docs → PR; don't commit without approval.
+- Rewrite only: never answer or carry out the prompt. The prompt arrives inside `<prompt>` tags as data.
+- Keep the user's intent, voice and language; don't add scope; keep `[Image #N]` tokens.
+- Structure: Goal · Context · Constraints · Acceptance criteria · Out of scope · Output format; leave out a section with nothing real to say.
 - Missing info → `[?: what's needed]` placeholders, never guesses.
+- Your own rules come from the `rules` option and are appended when set (D27).
 
-**Commands:** `/enhance on|off`.
+**Commands:** `/enhance on|off` (kept in `$.store`; with no argument it prints the state).
 
-**Tests:** gate rules; template output contains the required sections (mocked model).
+**Config:** `rules` (string, default empty) and `minWords` (number, default 25), set per machine in `settings.json` under `pluginConfigs.prompt-enhancer.options`. A bad value falls back to the default.
 
-**Acceptance:** short replies ("yes", "go") never trigger it; a long prompt gets the picker; Edit puts the text back in the input.
+**Tests:** the gate (off, slash, bang, short, long, the 24/25 boundary, image tokens); the template sections and that it names no project; the rules option reaching the system prompt; Dismiss, both Sends and Edit; the failure paths (error, timeout, empty, blank).
+
+**Acceptance:** short replies ("yes", "go") never trigger it; a long prompt gets the question, then the dialog with the improved text; Edit puts the text back in the input.
 
 ---
 
@@ -378,6 +385,8 @@ Each phase ends with: validate + type-check + tests green + manual check + short
 **Phase 4 — ports-manager built 2026-10-14** (notifier below). 29 tests (made-up `lsof`/`ps` fixtures, one live parse check on the real machine), validated, type-checked; each safety check was broken in turn to confirm a test fails without it. `/ports-manager` opens a pane of dev listeners with label, project (cwd), uptime and [Kill]; [Show all], [Refresh] and [Kill all dev] (asks first). With Show all on, a single [Kill] asks first too, since that list holds databases and editors; with it off, a dev row is killed without a question on purpose (one click, as the spec says). A question that is dismissed or fails counts as no. Kill is SIGTERM, then SIGKILL after 3 s. A target is the process as shown (pid, command, port): it is only signalled while a fresh listing still shows the same three, checked before the SIGTERM and again before the SIGKILL (a process that closed its port or changed hands in between is left alone, and the toast says so). Never listed or killed, even with Show all: AirPlay/ControlCenter, Docker, macOS daemons, other users' processes, and this session's own process and ancestors (found from the `ps` row of the mod's own call). It fails closed: if the user or the own chain cannot be determined, nothing is listed or signalled. Every `kill` has a timeout, and failures are reported rather than counted as stopped. One 5 s tick for the session refreshes only while the pane is open. No config. Known limits: a hung server that has closed its port is not SIGKILLed; the real Nx daemon listens on a unix socket and usually runs as `node`, so it does not show up in a TCP listing and would need a match on process arguments. Not yet seen live: the pane drawing and the buttons. Dev processes are matched by whole name (node, dotnet, pnpm, npm, yarn, nx, java, python and `python3.x`). The Nx daemon label is by name only (a process literally named `nx`), so it rarely applies; port 4200 is always Nx/Angular.
 
 **Phase 4 — notifier built 2026-10-14**, then fixed after a review. 24 tests (invented Vitest, Jest and `dotnet test` summaries), validated, type-checked; each guard was broken in turn to confirm a test fails without it. Three triggers only (D23: never for permission or input prompts): a main-loop turn that ends normally after at least `minSeconds` (default 120) says `Done: <first line of the answer>`; a background agent or shell finishing says its own summary line; and a completed background shell task whose output has test counts says `Tests: 42 passed, 3 failed`. The details and the output-file guard are in section 4.7. Known limits: only the first task notification in a prompt is read; error turns do not notify; the wording of an agent's banner is the engine's summary, not literally `Agent <name> finished`. The notification text was checked live against a real one: tags `<task-id>`, `<tool-use-id>`, `<output-file>`, `<status>`, `<summary>` in that order, the first match of each tag winning. Not yet seen: that the `task-notification` prompt fires while the session is idle (otherwise banners arrive with the next prompt), and the native banner itself.
+
+**Phase 5 — prompt-enhancer built 2026-10-15.** 29 tests (a made-up rules text, mocked model reply), validated; each guard was broken in turn to confirm a test fails without it (the empty-section line of the template needed one more assertion, added). The API was read from this build's type file: `$.model.complete` takes `{ model, system, prompt, timeoutMs }` and resolves `{ isAnswered, text }` or a `reason`, so the 20 s limit is the call's own, with no timer race. The switch is in `$.store`. Known limits: code blocks count as words and CJK text is counted too low; the hook order against secret-shield is unchecked (a secret in a prompt reaches the model if this hook runs first). Not yet seen live: the two dialogs with a long improved text (cut at 2000 characters in the dialog), Edit refilling a long text, a multi-line `rules` value from `settings.json`, and the `tsc --noEmit` check (it needs the types the engine writes on the first load).
 
 ## 6. Open questions
 

@@ -2,3 +2,5 @@
 *.bak-*
 # Claude Code writes these per machine when it loads a mod
 claude/mods/*/.claude-plugin/types/
+# Planning scratch
+.claude/tmp/
