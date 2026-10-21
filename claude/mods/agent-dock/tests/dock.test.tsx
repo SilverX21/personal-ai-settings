@@ -4,10 +4,10 @@ import type { Engine } from 'claude-code/testing'
 
 import { parseSize, restoreSize, splitInstruction } from '../hooks/dock-logic'
 
-const REPORT = 'mcp__clean-view__report_progress'
+const REPORT = 'mcp__agent-dock__report_progress'
 
 const PANE = {
-  plugin: 'clean-view',
+  plugin: 'agent-dock',
   component: 'Pane',
   requestId: 'agent-dock',
   props: {
@@ -34,7 +34,7 @@ async function boot($: Engine, on: On, { store = {}, env = {}, agentMs = 0 }: Bo
   const contexts: Array<readonly string[] | undefined> = []
   const nudges: string[] = []
   let isPaneOpen = false
-  on('tool.register', (_, e) => ({ value: { tool: `mcp__clean-view__${e.name}` } }))
+  on('tool.register', (_, e) => ({ value: { tool: `mcp__agent-dock__${e.name}` } }))
   on('command.register', (_, e) => ({ value: { command: e.name } }))
   on('ui.toast', () => ({ value: undefined }))
   on('ui.status', (_, e) => {

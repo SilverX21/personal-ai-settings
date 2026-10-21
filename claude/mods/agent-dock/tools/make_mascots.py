@@ -3,7 +3,7 @@
 
 Standard library only. Re-run after changing COLORS or the sprites:
 
-    python3 -I claude/mods/clean-view/tools/make_mascots.py
+    python3 -I claude/mods/agent-dock/tools/make_mascots.py
 
 Writes employee-headshots/helper-<nn>.png and employee-headshots/sheet.png (a preview).
 """

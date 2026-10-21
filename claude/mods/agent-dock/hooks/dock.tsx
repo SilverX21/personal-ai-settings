@@ -8,7 +8,6 @@ import {
   GOLD,
   GREEN,
   HAIRLINE,
-  HELPER_PLAN,
   RED,
   SIZES,
   SIZE_HINT,
@@ -57,17 +56,16 @@ type $ = EngineInterface
 
 const PANE = 'agent-dock'
 const PANE_COLUMNS = 78
-const PLAN_TOOL = 'mcp__clean-view__plan_steps'
-const REPORT_TOOL = 'mcp__clean-view__report_progress'
+const REPORT_TOOL = 'mcp__agent-dock__report_progress'
 const SIZE_KEY = 'dock.size'
 const MODEL_KEY = 'panel.helperModel'
 const DOCK_BUTTON = 'agent-dock-open'
 
 const DEFAULTS: DockSettings = { size: 1, helperModel: 'fast', pendingSize: null, isCustomOpen: false, isFolded: false }
 
-const settingsAtom = atom({ plugin: 'clean-view', key: 'dockSettings' } as const, DEFAULTS)
-const missionAtom = atom({ plugin: 'clean-view', key: 'dockMission' } as const, null)
-const tickAtom = atom({ plugin: 'clean-view', key: 'dockTick' } as const, 0)
+const settingsAtom = atom({ plugin: 'agent-dock', key: 'dockSettings' } as const, DEFAULTS)
+const missionAtom = atom({ plugin: 'agent-dock', key: 'dockMission' } as const, null)
+const tickAtom = atom({ plugin: 'agent-dock', key: 'dockTick' } as const, 0)
 
 // These start over on a reload; the dock itself lives in $.state.
 let ticker: Timer | undefined
@@ -205,9 +203,18 @@ async function canDrawImages($: $): Promise<boolean> {
 // ── Hooks ─────────────────────────────────────────────────────────────────
 
 export function registerAgentDock(on: On) {
-  // Clean View already owns the plain matchers of the events both use: these
-  // catch-all matchers keep each one's hook its own.
-  on('session.start', { cwd: /^/ }, async ($, e, next) => {
+  on('session.start', async ($, e, next) => {
+    await $.tool.register({
+      name: 'report_progress',
+      description:
+        'For Agent Dock helpers: report how far along your task is, 0 to 100, at about 25, 50, 75 and 100. It moves your card in the dock.',
+      inputSchema: {
+        type: 'object',
+        properties: { task: { type: 'string' }, percent: { type: 'number' } },
+        required: ['task', 'percent'],
+      },
+      isDeferred: false,
+    })
     await $.command.register({
       name: 'dock',
       description: 'Show or fold the Agent Dock, or set the Team Size',
@@ -252,7 +259,7 @@ export function registerAgentDock(on: On) {
     return closed
   })
 
-  on('prompt.submit', { text: /^/ }, async ($, e, next) => {
+  on('prompt.submit', async ($, e, next) => {
     const isOwnOrNotice = e.origin?.kind === 'plugin' || e.origin?.kind === 'task-notification'
     if (e.command !== undefined || e.isMeta === true || isOwnOrNotice || e.turnId !== undefined) {
       return next(e)
@@ -286,10 +293,10 @@ export function registerAgentDock(on: On) {
     return next(e)
   })
 
-  // Helpers report here before Clean View's own hook would answer them.
-  on('tool.call', { tool: [REPORT_TOOL, PLAN_TOOL], agentId: /./ }, async ($, e) => {
-    if (String(e.tool) === PLAN_TOOL) {
-      return { result: HELPER_PLAN }
+  // Each helper's own report moves its card.
+  on('tool.call', { tool: REPORT_TOOL }, async ($, e) => {
+    if (e.agentId === undefined) {
+      return { result: 'Noted. Only helpers need to report progress.' }
     }
     const percent = clampPercent((e as unknown as { percent?: unknown }).percent)
     const agentId = e.agentId ?? ''
@@ -372,7 +379,7 @@ export function registerAgentDock(on: On) {
     return spawned
   })
 
-  on('turn.complete', { reason: /^/ }, async ($, e, next) => {
+  on('turn.complete', async ($, e, next) => {
     const ran = await next(e)
     if (e.agentId !== undefined) {
       return ran
@@ -417,7 +424,8 @@ export function registerAgentDock(on: On) {
     return next(e)
   })
 
-  // The ◆ Dock button sits beside Clean View's own toggle above the prompt.
+  // The ◆ Dock button sits at the right of the band above the prompt, beside
+  // whatever the band already shows.
   on('ui.render', { component: 'AbovePrompt', props: { hasSurvey: false } }, async ($, e, next) => {
     const band = await next(e)
     const { Box, Button } = $.ui.resolve(e)

@@ -16,6 +16,10 @@
     {
       "name": "clean-view",
       "source": "./claude/mods/clean-view"
+    },
+    {
+      "name": "agent-dock",
+      "source": "./claude/mods/agent-dock"
     }
   ]
 }

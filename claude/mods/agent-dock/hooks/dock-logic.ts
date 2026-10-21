@@ -31,7 +31,6 @@ export const SIZE_HINT = 'Team Size is a whole number from 1 to 100, e.g. /dock 
 export const BAD_NUMBER = 'Type a whole number from 1 to 100'
 export const TOO_NARROW = 'The window is too narrow to show the Agent Dock. Widen it or watch the status bar.'
 export const STOPPED = 'Stopped before this helper started.'
-export const HELPER_PLAN = 'Helpers skip the plan. Just call report_progress as you work.'
 
 // ── Sizes ──────────────────────────────────────────────────────────────────
 
@@ -135,7 +134,7 @@ export function splitInstruction(size: number): string {
     `- Split this request into exactly ${size} independent pieces and launch one helper (the Agent tool) per piece, all in one message so they run in parallel.`,
     '- Find a real split, one helper per item (per store, per task, per file, per section). Never argue that it cannot be split and never pad with useless work.',
     '- Give each helper a short plain-English description of 3 to 5 words, e.g. "Price check: Panera".',
-    '- In each helper\'s prompt add: "As you work, call report_progress with your task name and a percent at about 25, 50, 75 and 100. Do not call plan_steps."',
+    '- In each helper\'s prompt add: "As you work, call mcp__agent-dock__report_progress with your task name and a percent at about 25, 50, 75 and 100."',
     '- When they finish, combine their results into one answer.',
   ].join('\n')
 }

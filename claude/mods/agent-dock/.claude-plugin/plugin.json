@@ -1,0 +1,8 @@
+{
+  "name": "agent-dock",
+  "version": "0.1.0",
+  "description": "Split each request across a team of parallel helper agents and watch every one work in a live pane.",
+  "author": { "name": "Nuno Araujo" },
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}
