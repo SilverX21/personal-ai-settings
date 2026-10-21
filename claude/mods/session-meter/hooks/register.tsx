@@ -37,6 +37,8 @@ let limits: Thresholds = DEFAULT_THRESHOLDS
 // The main-thread turn in flight, and the one that was in flight when a handoff began: that turn's end is not the handoff's end.
 let runningTurn: string | null = null
 let handoffAfter: string | null = null
+// The one refresh timer: each session.start replaces it instead of adding another.
+let tick: { cancel: () => void } | undefined
 
 export const register: Register = (on, options) => {
   limits = thresholds(options)
@@ -46,7 +48,8 @@ export const register: Register = (on, options) => {
       description: 'Session meter: ttl 5 | 60 | auto, or handoff',
       argumentHint: 'ttl 5|60|auto | handoff',
     })
-    $.clock.every(TICK_MS, () => void refresh($).catch(() => undefined))
+    tick?.cancel()
+    tick = $.clock.every(TICK_MS, () => void refresh($).catch(() => undefined))
     void refresh($).catch(() => undefined)
     return next(e)
   })
