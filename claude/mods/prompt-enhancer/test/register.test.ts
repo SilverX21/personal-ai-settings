@@ -238,3 +238,19 @@ test('a notification prompt is never offered a rewrite', async ($, on) => {
   await $.prompt.submit({ wait: false, origin: { kind: 'task-notification' }, text: TEXT } as never)
   expect(asked).toEqual([])
 })
+
+test('a prompt with a possible secret is not offered a rewrite and never reaches the model', async ($, on) => {
+  memStore(on)
+  const seen: string[] = []
+  const asked: string[] = []
+  const calls: unknown[] = []
+  answers(on, ['Improve prompt'], asked)
+  model(on, answered(IMPROVED), calls)
+  capture(on, seen)
+  await enable($ as never)
+  const text = `${TEXT} MY_SERVICE_AUTH=Wx2Rv7Np4Hc8Jd3Gf6Ys`
+  await submit($ as never, text)
+  expect(asked).toEqual([])
+  expect(calls).toEqual([])
+  expect(seen).toEqual([text])
+})

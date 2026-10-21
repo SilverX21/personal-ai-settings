@@ -1,5 +1,7 @@
 import type { EngineInterface, Register } from 'claude-code'
 
+// secrets.ts is a verbatim copy of secret-shield's logic.ts (installed mods cannot import each other); scripts/check-secrets-copy.mjs checks they match.
+import { detect } from './secrets'
 import { askBody, buildPrompt, buildSystem, cleanReply, cleanRules, parseMinWords, shouldOffer } from './logic'
 
 const ENABLED_KEY = 'enabled'
@@ -49,6 +51,8 @@ export const register: Register = (on, options) => {
     if (e.isMeta || e.command || e.origin?.kind !== 'composer') return next(e)
     const isEnabled = (await $.store.get(ENABLED_KEY)) === true
     if (!shouldOffer(e.text, isEnabled, min)) return next(e)
+    // A prompt with a possible secret is never sent to the rewrite model; it goes on as typed for secret-shield to handle.
+    if (detect(e.text).length > 0) return next(e)
 
     if ((await ask($, 'Improve this prompt?', [IMPROVE, DISMISS], DISMISS)) !== IMPROVE) return next(e)
 
