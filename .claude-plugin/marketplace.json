@@ -8,30 +8,6 @@
     {
       "name": "session-meter",
       "source": "./claude/mods/session-meter"
-    },
-    {
-      "name": "test-guard",
-      "source": "./claude/mods/test-guard"
-    },
-    {
-      "name": "secret-shield",
-      "source": "./claude/mods/secret-shield"
-    },
-    {
-      "name": "ship-band",
-      "source": "./claude/mods/ship-band"
-    },
-    {
-      "name": "ports-manager",
-      "source": "./claude/mods/ports-manager"
-    },
-    {
-      "name": "notifier",
-      "source": "./claude/mods/notifier"
-    },
-    {
-      "name": "prompt-enhancer",
-      "source": "./claude/mods/prompt-enhancer"
     }
   ]
 }

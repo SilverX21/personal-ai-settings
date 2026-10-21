@@ -1,9 +1,0 @@
-{
-  "name": "test-guard",
-  "version": "0.1.0",
-  "description": "Catches full-suite test runs and hook-triggered test runs on git push; observe mode logs what ask mode would catch.",
-  "types": "./types/index.d.ts",
-  "author": {
-    "name": "Nuno Araujo"
-  }
-}

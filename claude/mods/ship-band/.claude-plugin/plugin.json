@@ -1,9 +1,0 @@
-{
-  "name": "ship-band",
-  "version": "0.1.0",
-  "description": "A band above the prompt showing which delivery step the current branch is on (plan, implement, tests, review, security, docs, commit, PR, merged), with a button that fills the next step's prompt.",
-  "types": "./types/index.d.ts",
-  "author": {
-    "name": "Nuno Araujo"
-  }
-}

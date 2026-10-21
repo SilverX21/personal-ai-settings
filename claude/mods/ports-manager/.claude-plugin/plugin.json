@@ -1,9 +1,0 @@
-{
-  "name": "ports-manager",
-  "version": "0.1.0",
-  "description": "/ports-manager opens a pane listing dev servers that listen on a TCP port (Vite, Storybook, Nx, dotnet ...) with one-click kill.",
-  "types": "./types/index.d.ts",
-  "author": {
-    "name": "Nuno Araujo"
-  }
-}
