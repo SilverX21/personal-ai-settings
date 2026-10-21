@@ -8,6 +8,14 @@
     {
       "name": "session-meter",
       "source": "./claude/mods/session-meter"
+    },
+    {
+      "name": "prompt-upgrade",
+      "source": "./claude/mods/prompt-upgrade"
+    },
+    {
+      "name": "clean-view",
+      "source": "./claude/mods/clean-view"
     }
   ]
 }

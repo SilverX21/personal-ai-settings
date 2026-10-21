@@ -1,6 +1,6 @@
 # Claude Code mods — build plan
 
-Status: session-meter is the only mod · Updated: 2026-10-21 · Owner: Nuno
+Status: two mods, session-meter and prompt-upgrade · Updated: 2026-10-21 · Owner: Nuno
 
 ## Table of contents
 
@@ -8,8 +8,9 @@ Status: session-meter is the only mod · Updated: 2026-10-21 · Owner: Nuno
 2. [Decisions](#2-decisions)
 3. [Shared conventions](#3-shared-conventions)
 4. [Mod spec: session-meter](#4-mod-spec-session-meter)
-5. [Retired mods](#5-retired-mods)
-6. [Out of scope](#6-out-of-scope)
+5. [Mod spec: prompt-upgrade](#5-mod-spec-prompt-upgrade)
+6. [Retired mods](#6-retired-mods)
+7. [Out of scope](#7-out-of-scope)
 
 ---
 
@@ -124,13 +125,31 @@ Known and not done: the dependency on an external `/handoff` command (D2).
 
 ---
 
-## 5. Retired mods
+## 5. Mod spec: prompt-upgrade
+
+**Goal:** turn a rough prompt into a complete one before it is sent: up to three multiple-choice questions, a rewrite, then a side-by-side review. Nothing is sent until **Run it**. Usage and install steps: `prompt-upgrade/README.md`.
+
+| # | Decision |
+|---|---|
+| D31 | `/better <prompt>` upgrades one prompt; `/better on`/`off` switches automatic mode (off by default), which sends typed prompts to the pane first. Slash commands, attachments, prompts typed while a turn runs, replies of three words or fewer, and a leading `>` (stripped) pass through. |
+| D32 | Only prompts the person typed (origin `composer`) are intercepted, so the mod's own `$.prompt.submit` on **Run it** cannot loop back. |
+| D33 | Questions use `haiku`, the rewrite `sonnet`: two model calls per upgrade. The rewrite never invents facts; unknowns stay as `[placeholders]`. |
+| D34 | The flow lives in `$.state` (survives a reload, and the interrupted model call is re-run); history (last 20) and the switch live in `$.store`. Cancel, or closing the pane, puts the original back in the prompt box. |
+| D35 | Ships with its own `install.sh`, which re-points a `nuno-mods` marketplace that reads from another folder before installing. |
+
+It does what the retired prompt-enhancer (section 6) did, but in a pane, with questions, and only on request or in automatic mode.
+
+Known and not done: no live check yet of the pane's look on the terminal and desktop surfaces.
+
+---
+
+## 6. Retired mods
 
 On 2026-10-21 six mods were removed from this repo and uninstalled: test-guard, secret-shield, ship-band, ports-manager, notifier and prompt-enhancer. A seventh, azure-wi, lived outside this repo and was deleted with it. Their specs, decisions (D7–D16, D18, D19, D22, D23, D27–D30; D17 went with prompt-enhancer) and phase notes were dropped from this file. The code stays in git history: `git log --diff-filter=D --name-only -- claude/mods` finds the commit that removed each one (they are all present in `f3e046a~1`).
 
 Unfixed audit items left behind with them: secret-shield did not cover secrets written through Bash; test-guard had no "ask" mode (it only observed); azure-wi did not handle concurrent calls.
 
-## 6. Out of scope
+## 7. Out of scope
 
 - Screenshot path hook: pasted images work as `[Image #N]`.
 - Pruning unused skills/agents (separate cleanup task).

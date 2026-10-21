@@ -1,0 +1,8 @@
+{
+  "name": "prompt-upgrade",
+  "version": "0.1.0",
+  "description": "Turns a rough prompt into a great one in a pane: up to three quick questions, a rewrite, then a side-by-side review before you press Run.",
+  "author": { "name": "Nuno Araujo" },
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}
