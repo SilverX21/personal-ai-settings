@@ -1,7 +1,7 @@
 {
   "name": "clean-view",
-  "version": "0.1.0",
-  "description": "A calm, plain-English checklist above the prompt that shows the plan, the current step and how far along Claude is.",
+  "version": "0.2.0",
+  "description": "A calm, plain-English checklist above the prompt, plus the Agent Dock: split each request across a team of parallel helpers and watch them work.",
   "author": { "name": "Nuno Araujo" },
   "license": "MIT",
   "types": "./types/index.d.ts"
