@@ -4,3 +4,4 @@
 claude/mods/*/.claude-plugin/types/
 # Planning scratch
 .claude/tmp/
+graphify-out/*

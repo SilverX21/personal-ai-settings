@@ -55,12 +55,7 @@ fi
 echo "==> Installing my mods (this repo is a folder marketplace)"
 # A folder marketplace is read in place: git pull + /reload-plugins updates them, no reinstall.
 # Work-specific mod options live in ~/.claude/settings.json -> pluginConfigs, never in this repo.
-if command -v claude >/dev/null 2>&1; then
-  if claude plugin marketplace list 2>/dev/null | grep -q '❯ nuno-mods$'; then
-    info "have     marketplace nuno-mods"
-  else
-    claude plugin marketplace add "$REPO" >/dev/null && info "added    marketplace nuno-mods"
-  fi
+install_mods() {
   python3 -c '
 import json,sys
 for p in json.load(open(sys.argv[1]))["plugins"]: print(p["name"])
@@ -71,6 +66,30 @@ for p in json.load(open(sys.argv[1]))["plugins"]: print(p["name"])
       warn "install failed: $mod@nuno-mods (try: claude plugin install $mod@nuno-mods)"
     fi
   done
+}
+
+if command -v claude >/dev/null 2>&1; then
+  # Existence alone isn't enough: a mod's own install script once registered
+  # "nuno-mods" pointing at its own folder, which hid every other mod here.
+  # Paths are compared resolved, since $REPO may reach the repo through a symlink.
+  current="$(claude plugin marketplace list --json 2>/dev/null | python3 -c '
+import json,os,sys
+for m in json.load(sys.stdin):
+    if m.get("name") == "nuno-mods": print(os.path.realpath(m.get("path") or m.get("installLocation") or ""))
+' || true)"
+  wanted="$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$REPO")"
+  if [ -z "$current" ]; then
+    claude plugin marketplace add "$REPO" >/dev/null && info "added    marketplace nuno-mods"
+    install_mods
+  elif [ "$current" = "$wanted" ]; then
+    info "have     marketplace nuno-mods"
+    install_mods
+  else
+    # Not fixed automatically: removing a marketplace uninstalls its plugins and
+    # deletes their saved options (pluginConfigs), which may hold work values.
+    warn "marketplace nuno-mods points at $current, not this repo; skipped mods. To fix (resets mod options):"
+    warn "  claude plugin marketplace remove nuno-mods && ./install.sh"
+  fi
 else
   warn "claude CLI not found, skipped mods"
 fi

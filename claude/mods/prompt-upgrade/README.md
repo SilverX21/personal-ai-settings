@@ -17,7 +17,7 @@ From a terminal session's prompt:
 /plugin install prompt-upgrade --marketplace SilverX21/personal-ai-settings
 ```
 
-From a local clone of this repo, run the install script. It adds the `nuno-mods` marketplace from the clone (or re-points one that reads from another folder) and installs the mod at user scope:
+From a local clone of this repo, run the install script. It adds the `nuno-mods` marketplace from the clone (or re-points one that reads from another folder) and installs the mod at user scope. Re-pointing uninstalls every mod from the old marketplace, so the script reinstalls the others it found, with the same scope and on/off state; their saved options are reset to defaults:
 
 ```
 ./claude/mods/prompt-upgrade/install.sh
