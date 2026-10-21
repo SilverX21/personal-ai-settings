@@ -23,7 +23,8 @@ const RULES: readonly Rule[] = [
   // (x-api-key, clientSecret, AUTH_TOKEN, db_password, sig=). The value check below drops the false ones.
   {
     kind: 'named-secret',
-    pattern: /(?<![A-Za-z0-9])[A-Za-z0-9_.-]*(?:key|secret|token|passw(?:or)?d|pwd|credentials?|auth(?:orization)?|sig(?:nature)?)["']?\s*[:=]\s*["']?(?:Bearer\s+|Basic\s+)?([^\s"',;&\\`]{16,})/gi,
+    // The name prefix is capped: unbounded, a long run of `a-a-a-…` is rescanned from every start (quadratic).
+    pattern: /(?<![A-Za-z0-9])[A-Za-z0-9_.-]{0,64}(?:key|secret|token|passw(?:or)?d|pwd|credentials?|auth(?:orization)?|sig(?:nature)?)["']?\s*[:=]\s*["']?(?:Bearer\s+|Basic\s+)?([^\s"',;&\\`]{16,})/gi,
     group: 1,
   },
 ]

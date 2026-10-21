@@ -76,3 +76,12 @@ test('mask shows only the edges', () => {
   expect(mask(RANDOM)).toBe('Fq8v…Pq (43)')
   expect(mask('short')).toBe('*****')
 })
+
+// Regression: the named-secret prefix was unbounded, so dash/underscore-separated text of this size took seconds.
+test('long separator-heavy text is scanned in linear time and still finds a secret after it', () => {
+  const filler = 'ab-'.repeat(33_000)
+  const started = performance.now()
+  const found = detect(`${filler}\nMY_SERVICE_AUTH=Wx2Rv7Np4Hc8Jd3Gf6Ys`, { entropy: false })
+  expect(performance.now() - started).toBeLessThan(250)
+  expect(found.map(f => f.kind)).toEqual(['named-secret'])
+})
