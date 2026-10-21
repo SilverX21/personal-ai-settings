@@ -53,7 +53,15 @@ describe('thresholds', () => {
       yellow: 20,
     })
     expect(thresholds({ warnPercent: '' }).warn).toBe(DEFAULT_THRESHOLDS.warn)
-    expect(thresholds({ warnPercent: 0 }).warn).toBe(0)
+    expect(thresholds({ yellowPercent: 0, warnPercent: 0 }).warn).toBe(0)
+  })
+
+  test('out-of-order yellow/warn/red fall back to the defaults, coldTip is kept', () => {
+    const d = DEFAULT_THRESHOLDS
+    expect(thresholds({ warnPercent: 20 })).toEqual(d)
+    expect(thresholds({ yellowPercent: 50, warnPercent: 40, redPercent: 70, coldTipPercent: 10 })).toEqual({ ...d, coldTip: 10 })
+    expect(thresholds({ redPercent: 40 })).toEqual(d)
+    expect(thresholds({ yellowPercent: 40, warnPercent: 40, redPercent: 40 })).toMatchObject({ yellow: 40, warn: 40, red: 40 })
   })
 
   test('contextTone follows the thresholds', () => {

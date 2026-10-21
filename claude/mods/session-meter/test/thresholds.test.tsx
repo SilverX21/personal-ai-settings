@@ -42,7 +42,7 @@ test('defaults: 47% is amber with a handoff offer and one toast, not red', async
   await ui.unmount()
 })
 
-test('warnPercent decides the handoff offer and the toast', { options: { warnPercent: 80, yellowPercent: 90, redPercent: 95 } }, async ($, on) => {
+test('warnPercent decides the handoff offer and the toast', { options: { warnPercent: 80, yellowPercent: 70, redPercent: 95 } }, async ($, on) => {
   const { ui, toasts, tone } = await draw($, on, 47)
   expect(await ui.find({ key: 'handoff' })).toBeUndefined()
   expect(toasts).toHaveLength(0)
@@ -50,7 +50,7 @@ test('warnPercent decides the handoff offer and the toast', { options: { warnPer
   await ui.unmount()
 })
 
-test('warnPercent also colors the figure', { options: { warnPercent: 40, yellowPercent: 90, redPercent: 95 } }, async ($, on) => {
+test('a lower yellowPercent colors the figure from there', { options: { warnPercent: 40, yellowPercent: 35, redPercent: 95 } }, async ($, on) => {
   const { ui, tone } = await draw($, on, 47)
   expect(await tone()).toBe('warning')
   await ui.unmount()

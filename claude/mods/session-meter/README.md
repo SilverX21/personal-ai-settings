@@ -3,7 +3,7 @@
 A band above the prompt that shows the model, how full the context is, and how warm the prompt cache is. When the context gets large it offers a one-click handoff, so you can start a fresh session without losing the thread.
 
 ```
-Opus 5.5 · ctx 47% ▓▓▓▓▓░░░░░ · cache Warm 52m   ⚠ time to hand off [Prepare handoff]
+Opus 5.5 · ctx 47% ▓▓▓▓▓░░░░░ · cache Warm 52m [Prepare handoff]
 ```
 
 ## Install
@@ -55,11 +55,11 @@ Set in the install screen, in `/config`, or in settings under `pluginConfigs.ses
 | Option | Default | Effect |
 |---|---|---|
 | `yellowPercent` | 30 | The context figure gets a color from here |
-| `warnPercent` | 45 | Amber and bold, the **Prepare handoff** button, and the toast |
+| `warnPercent` | 45 | The **Prepare handoff** button and the toast (the figure is already amber from `yellowPercent`) |
 | `redPercent` | 60 | The context figure turns red |
 | `coldTipPercent` | 40 | The cold-cache tip appears from here, when the cache is cold |
 
-Keep `yellowPercent` below `warnPercent` and `redPercent`. The mod does not check the order.
+Keep `yellowPercent <= warnPercent <= redPercent`. If the order is broken, the three fall back to their defaults (30/45/60).
 
 ## Limits
 

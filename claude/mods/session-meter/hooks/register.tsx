@@ -81,7 +81,11 @@ export const register: Register = (on, options) => {
   })
 
   on('turn.start', async ($, e, next) => {
-    if (e.agentId === undefined) runningTurn = e.turnId
+    if (e.agentId === undefined) {
+      runningTurn = e.turnId
+      // The user moved on: the "handoff copied" line has done its job.
+      if ((await read($, meter)).handoff === 'ready') await update($, meter, (m): Meter => ({ ...m, handoff: 'idle' }))
+    }
     return next(e)
   })
 
@@ -122,7 +126,7 @@ export const register: Register = (on, options) => {
         {percent === null ? (
           <Text dimColor>ctx –</Text>
         ) : (
-          <Text color={contextTone(percent, limits)} bold={isWarn}>
+          <Text color={contextTone(percent, limits)}>
             ctx {percent}% {bar(percent)}
           </Text>
         )}
@@ -137,7 +141,7 @@ export const register: Register = (on, options) => {
         )}
         {isWarn && m.handoff === 'idle' && (
           <>
-            <Text color="warning">   ⚠ time to hand off </Text>
+            <Text> </Text>
             <Button key="handoff" label="Prepare handoff" variant="primary" onPress={() => void startHandoff($)} />
           </>
         )}

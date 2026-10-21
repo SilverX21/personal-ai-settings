@@ -38,17 +38,20 @@ export function thresholds(options: Readonly<Record<string, unknown>>): Threshol
     return value !== undefined && value !== '' && Number.isFinite(n) && n >= 0 && n <= 100 ? n : fallback
   }
   const d = DEFAULT_THRESHOLDS
-  return {
+  const t = {
     yellow: pick(options.yellowPercent, d.yellow),
     warn: pick(options.warnPercent, d.warn),
     red: pick(options.redPercent, d.red),
     coldTip: pick(options.coldTipPercent, d.coldTip),
   }
+  // Out of order (e.g. warn below yellow) the bands would overlap or never show: use the defaults for all three rather than guess which one is wrong.
+  const isOrdered = t.yellow <= t.warn && t.warn <= t.red
+  return isOrdered ? t : { ...t, yellow: d.yellow, warn: d.warn, red: d.red }
 }
 
 export function contextTone(percent: number, t: Thresholds): Tone {
   if (percent >= t.red) return 'error'
-  if (percent >= t.yellow || percent >= t.warn) return 'warning'
+  if (percent >= t.yellow) return 'warning'
   return undefined
 }
 
