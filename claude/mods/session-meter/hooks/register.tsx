@@ -34,6 +34,10 @@ const TRANSCRIPT_SCRIPT = `f=$(ls "\${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/project
 // Set from the plugin's options each time the module loads, so refresh() and the band read the same values.
 let limits: Thresholds = DEFAULT_THRESHOLDS
 
+// The main-thread turn in flight, and the one that was in flight when a handoff began: that turn's end is not the handoff's end.
+let runningTurn: string | null = null
+let handoffAfter: string | null = null
+
 export const register: Register = (on, options) => {
   limits = thresholds(options)
   on('session.start', async ($, e, next) => {
@@ -73,14 +77,22 @@ export const register: Register = (on, options) => {
     return { text: 'Usage: /session-meter ttl 5|60|auto  ·  /session-meter handoff' }
   })
 
+  on('turn.start', async ($, e, next) => {
+    if (e.agentId === undefined) runningTurn = e.turnId
+    return next(e)
+  })
+
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)
     if (e.agentId !== undefined) return result
+    if (e.turnId === runningTurn) runningTurn = null
+    const isBeforeHandoff = e.turnId === handoffAfter
+    if (isBeforeHandoff) handoffAfter = null
 
     const now = await $.clock.now()
     await update($, meter, (m): Meter => ({ ...m, lastTouch: now, now }))
     await detectTtl($).catch(() => undefined)
-    if ((await read($, meter)).handoff === 'running') await finishHandoff($)
+    if (!isBeforeHandoff && (await read($, meter)).handoff === 'running') await finishHandoff($)
     await refresh($).catch(() => undefined)
     return result
   })
@@ -168,7 +180,13 @@ async function detectTtl($: EngineInterface): Promise<void> {
 }
 
 async function startHandoff($: EngineInterface): Promise<void> {
-  if ((await read($, meter)).handoff === 'running') return
+  // Noted before the first await: the turn in flight may end while the reads below are pending.
+  const previous = handoffAfter
+  handoffAfter = runningTurn
+  if ((await read($, meter)).handoff === 'running') {
+    handoffAfter = previous
+    return
+  }
   const [id, tmp, branchRun] = await Promise.all([
     $.session.id(),
     $.env.get('TMPDIR'),
