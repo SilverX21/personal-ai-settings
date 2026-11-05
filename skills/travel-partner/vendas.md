@@ -12,7 +12,7 @@ Fontes: venda consultiva (RAIN Group, Pipedrive), negociação por interesses (F
 
 ## Objeções: Ouvir → Reconhecer → Explorar → Responder
 
-Uma objeção é um pedido de clareza ou de segurança, não um "não". **Primeiro explora, depois responde.** Pergunta o que está por trás antes de argumentar.
+Uma objeção é um pedido de clareza ou de segurança, não um "não". **Primeiro explora, depois responde.** Pergunta o que está por trás antes de argumentar. Nunca discutir. Quando a objeção é emocional (medo, desconfiança), responde-se com empatia e uma história real e curta (do Nuno ou de outro cliente, com consentimento), não com lógica.
 
 | Objeção | Explorar | Resposta honesta |
 |---|---|---|
@@ -49,3 +49,4 @@ Acompanhar sem ser invasivo. A maioria das vendas perde-se por falta de acompanh
 - Contacto no regresso: "Como correu?" Pedir feedback e resolver o que tiver corrido mal.
 - Pedir **referências** a clientes satisfeitos: "Conhecem alguém que esteja a planear férias e a quem eu possa ajudar?"
 - Prova social nas redes só **com consentimento explícito** do cliente.
+- Registar o cliente na lista de contactos (próxima viagem, datas importantes). Um cliente satisfeito é mercado quente. Se um dia mostrar uma necessidade real (FORM), pode receber o convite para a oportunidade ([equipa.md](equipa.md)), mas nunca durante uma venda nem como condição.

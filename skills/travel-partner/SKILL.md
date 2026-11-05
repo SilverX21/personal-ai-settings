@@ -1,6 +1,7 @@
 ---
 name: travel-partner
-description: Guia do Travel Partner iCliGo para trabalho com clientes e para crescer o negócio. Usar quando: qualificar um cliente ou pedido de viagem; pesquisar e preparar orçamento, proposta, itinerário ou comparação de hotéis; procurar voos mais baratos em datas flexíveis; responder a objeções, fazer follow-up, fechar ou negociar uma venda; gerar ideias, campanhas ou plano para vender mais ou subir de patamar; apresentar a oportunidade de negócio a potenciais parceiros, responder às objeções deles ("não tenho tempo", "é caro", "é pirâmide"), acompanhar interessados ou integrar um novo membro da equipa.
+description: >-
+  Guia do Travel Partner iCliGo para trabalho com clientes e para crescer o negócio. Usar quando: qualificar um cliente ou pedido de viagem; pesquisar e preparar orçamento, proposta, itinerário ou comparação de hotéis; procurar voos mais baratos em datas flexíveis; responder a objeções, fazer follow-up, fechar ou negociar uma venda; gerar ideias, campanhas ou plano para vender mais ou subir de patamar; construir equipa (curso Be a Pro, livro Go Pro de Eric Worre): fazer a lista de contactos, conversar com o FORM, escrever um convite, preparar a apresentação ou o fecho depois do webinar, responder às objeções de potenciais parceiros ("não tenho tempo", "é caro", "é pirâmide"), acompanhar interessados, iniciar e mentorar um novo membro ou convidar para um evento.
 ---
 
 # Travel Partner iCliGo
@@ -72,6 +73,6 @@ Lê o guia do ramo em que estás, antes de agir:
 | Orçamento: fluxo completo (secção "Criação de orçamentos" acima) e, para pesquisa: iCliGo → operadores → voos em datas flexíveis, e montagem | [pesquisa.md](pesquisa.md) |
 | Venda: apresentar a proposta, objeções, follow-up, fecho, negociação, pedir referências | [vendas.md](vendas.md) |
 | Crescimento: ideias, campanhas, rotina semanal, métricas, patamares | [crescimento.md](crescimento.md) |
-| Equipa: apresentar a oportunidade, objeções de potenciais parceiros, acompanhamento de interessados, integração de novos membros | [equipa.md](equipa.md) |
+| Equipa (curso Be a Pro / *Go Pro*): lista de contactos e FORM, convite, apresentação por webinar, fecho, objeções de potenciais parceiros, acompanhamento (exposições), iniciar um novo membro e papel do mentor, promoção de eventos | [equipa.md](equipa.md) |
 
 Um pedido completo de cliente passa normalmente por **qualificação → pesquisa → venda**, por esta ordem.

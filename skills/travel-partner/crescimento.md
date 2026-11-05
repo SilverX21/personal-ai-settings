@@ -18,7 +18,8 @@ A sessão só está concluída quando cada uma das 3 tem uma próxima ação com
 - **Referências:** pedir sempre depois de uma viagem que correu bem.
 - **Mercado frio:** Instagram (pilares no `CLAUDE.md`), cartões de visita, formulário, parcerias locais (fotógrafos de casamento, ginásios, escolas, empresas, grupos e associações).
 - **Nichos com ticket alto ou recorrência:** lua-de-mel, famílias numerosas, grupos (escuteiros, amigos, despedidas), viagens de empresa, seniores, fins de semana em cidade.
-- Manter a **base de dados** de contactos e interesses. É dela que saem as campanhas.
+- Manter a **base de dados** de contactos e interesses. É dela que saem as campanhas. É a mesma lista da prospeção de equipa (campos e aquecimento do mercado frio em [equipa.md](equipa.md), secção 1).
+- **Mínimo diário:** 1 ação nas redes (publicação, story, comentário ou mensagem) e +2 contactos novos na lista.
 
 ## Calendário de campanhas (Portugal)
 
@@ -37,10 +38,11 @@ Promover com 4 a 8 semanas de antecedência face à data da viagem.
 
 - A **agenda** semanal tem blocos fixos: divulgação, orçamentos e follow-ups, formação e eventos, e equipa.
 - Métricas a acompanhar todas as semanas: contactos feitos → pedidos de orçamento → orçamentos enviados → reservas → pontos. A **taxa de conversão** (reservas ÷ orçamentos) indica onde está o problema. Muitos contactos e poucos pedidos: problema de divulgação. Muitos orçamentos e poucas reservas: problema de proposta ou de follow-up.
+- Funil de equipa, na mesma lógica: contactos (FORM) → necessidades reais identificadas → convites → apresentações → fechos → novos parceiros a fazer os primeiros 1.000€. Muitos contactos e poucos convites: falta aprofundar o FORM. Muitos convites e poucas presenças: convite sem necessidade ou sem data. Muitas apresentações e poucos fechos: fecho ou acompanhamento (4 a 6 exposições).
 - Eventos da semana e presenciais: ver `CLAUDE.md`.
 
 ## Equipa
 
 - A alavanca mais próxima é **ajudar cada elemento a fazer os primeiros 1.000€**. Isso dá commission first sales + 1 pt, e as vendas dele também somam pontos para o Nuno.
 - Os patamares a partir de Director exigem **canais independentes** com Masters ou superior. Planear a equipa em largura (vários canais) e não só em profundidade.
-- Para apresentar a oportunidade, responder a objeções, acompanhar interessados e integrar novos membros: [equipa.md](equipa.md).
+- Para prospetar, convidar, apresentar, fechar, responder a objeções, acompanhar interessados, iniciar novos membros e promover eventos: [equipa.md](equipa.md).
