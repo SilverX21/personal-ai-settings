@@ -1,6 +1,7 @@
 ---
 name: plan-code
 description: Plans the implementation approach for a change — files, contracts, sequencing, and principle trade-offs. Use during planning, after the context brief exists.
+model: sonnet
 disallowedTools: Write, Edit, NotebookEdit, Bash
 ---
 

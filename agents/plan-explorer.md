@@ -1,6 +1,7 @@
 ---
 name: plan-explorer
 description: Gathers narrow, targeted repository context for a planning session and writes a shared context brief. Use before any planning subagents fan out.
+model: haiku
 tools:
   - Read
   - Grep

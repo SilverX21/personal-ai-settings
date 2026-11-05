@@ -1,6 +1,7 @@
 ---
 name: plan-docs
 description: Plans documentation updates for a change — which docs move, what decisions get recorded, and where. Use during planning, after the context brief exists.
+model: sonnet
 tools:
   - Read
   - Grep

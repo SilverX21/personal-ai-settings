@@ -1,6 +1,7 @@
 ---
 name: plan-tests
 description: Plans test coverage for a change — behaviors to cover, test files, edge cases, and exactly which suites to run. Use during planning, after the context brief exists.
+model: sonnet
 disallowedTools: Write, Edit, NotebookEdit, Bash
 ---
 
