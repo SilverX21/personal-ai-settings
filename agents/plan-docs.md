@@ -28,6 +28,9 @@ Not just what changed.
 ## New docs
 Only if nothing existing is the right home. Justify each one.
 
+## Risks
+Docs that may go stale, conflict with each other, or describe unverified behavior.
+
 ## Unknowns
 ```
 

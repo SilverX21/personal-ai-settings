@@ -36,6 +36,10 @@ If you can't determine which suites the change affects, say so under Unknowns.
 Boundaries, failure paths, concurrency, nulls, permissions — whatever actually
 applies. No filler.
 
+## Risks
+Tests that are flaky, slow, or touch shared state; anything that could mask a
+regression.
+
 ## Unknowns
 ```
 
