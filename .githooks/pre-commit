@@ -27,7 +27,7 @@ fi
 
 # NOTE: cspell reads from disk, not the index. For a partially staged file this checks
 # the working-tree version, which can differ from what is being committed.
-"${CSPELL[@]}" --no-progress "${files[@]}" || {
+"${CSPELL[@]}" --no-progress --no-must-find-files "${files[@]}" || {
   cat >&2 <<'MSG'
 
 Commit blocked: cspell found unknown words above.
