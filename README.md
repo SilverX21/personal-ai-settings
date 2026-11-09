@@ -20,11 +20,18 @@ agents/         subagents I wrote (DocsExplorer, plan-* agents used by plan-mast
 config/         reference copies of settings.json / settings.local.json
 third-party/    manifest of everything installed from upstream — not vendored
 presets/        drop-in bundles per stack (native files per tool)
+prompts/        one-off prompts that generate or update a project's AGENTS.md
+templates/      copy-ready CLAUDE.md / Cursor / Copilot adapters (symlinks to cursor/, copilot/)
 AGENTS.md       kernel condensation (Agents.md spec). Tool extras live in adapters.
 .githooks/      versioned git hooks (cspell gate on staged Markdown)
 install.sh      wire this repo into ~/.claude
 use.sh          drop a preset into a project
 ```
+
+**Set up a project's agent rules** (alternative to presets):
+
+- [`prompts/`](prompts/README.md) — two prompts that write a project's `AGENTS.md`: `new-project.md` for empty repos, `ongoing-project.md` for repos with existing rules.
+- [`templates/`](templates/README.md) — thin per-tool adapters (`CLAUDE.md`, Cursor, Copilot) with copy commands; they only point to `AGENTS.md`.
 
 **Vendored vs referenced.** Only what I authored lives here in full. The 14 third-party
 skills and 20 plugins are recorded in `third-party/manifest.json` with their upstream
@@ -90,8 +97,9 @@ When you name a repo, update **additively**:
    Do not paste the file’s contents.
 4. If the project already has its own workflow doc, keep it. Point at the kernel
    file for the shared bits; leave local differences (e.g. who commits) in place.
-5. Cursor / Copilot adapters: copy `.cursor/rules/adapter.mdc` and
-   `.github/copilot-instructions.md` the same way, only if those paths are free.
+5. Cursor / Copilot / Claude adapters: copy them from [`templates/`](templates/README.md)
+   (copy commands there), only if those paths are free. For a project with existing
+   rules, run `prompts/ongoing-project.md` first.
 
 ---
 

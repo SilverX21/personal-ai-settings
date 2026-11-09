@@ -1,12 +1,13 @@
 ---
-description: Cursor adapter. Kernel is AGENTS.md — do not restate it here.
+description: Cursor adapter. Shared rules are in AGENTS.md; do not restate them here.
 alwaysApply: true
 ---
 
 # Cursor adapter
 
-Kernel: `AGENTS.md`. Follow it. Do not copy those rules into this directory.
+Read and follow `AGENTS.md` at the repo root. It is the single source of shared rules.
+Do not copy its rules into this directory.
 
-Cursor-only extras belong in `.cursor/rules/*.mdc`. One concern per file.
+Cursor-only extras go in separate `.cursor/rules/*.mdc` files, one concern per file.
 
 No extras yet.

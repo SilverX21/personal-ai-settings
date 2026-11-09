@@ -23,6 +23,8 @@
   ],
   "words": [
     "antipatterns",
+    "lockfiles",
+    "overengineering",
     "Ghostty",
     "heredocs",
     "appsettings",
